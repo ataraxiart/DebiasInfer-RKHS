@@ -1,0 +1,2758 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath,amssymb,amsthm,amsfonts,mathtools,bm,enumitem,longtable,array}
+% Use the standard algorithm packages when available. The fallbacks keep this
+% source compilable in minimal TeX installations without changing the algorithms.
+\IfFileExists{algorithm.sty}{\usepackage{algorithm}}{%
+  \usepackage{float}
+  \floatstyle{ruled}
+  \newfloat{algorithm}{htbp}{loa}
+  \floatname{algorithm}{Algorithm}
+}
+\IfFileExists{algpseudocode.sty}{\usepackage{algpseudocode}}{%
+  \newcounter{ALGline}
+  \newlength{\ALGindent}
+  \newenvironment{algorithmic}[1][1]{%
+    \setlength{\ALGindent}{0pt}%
+    \begin{list}{\scriptsize\arabic{ALGline}:}{%
+      \usecounter{ALGline}\setlength{\leftmargin}{2em}%
+      \setlength{\labelwidth}{1.5em}\setlength{\labelsep}{.5em}%
+      \setlength{\itemsep}{0pt}\setlength{\parsep}{0pt}}}{\end{list}}
+  \newcommand{\State}{\item\hspace*{\ALGindent}}
+  \newcommand{\Require}{\item[]\textbf{Require:} }
+  \newcommand{\Return}{\textbf{return}}
+  \newcommand{\If}[1]{\State\textbf{if} ##1 \textbf{then}\addtolength{\ALGindent}{1em}}
+  \newcommand{\EndIf}{\addtolength{\ALGindent}{-1em}\State\textbf{end if}}
+  \newcommand{\For}[1]{\State\textbf{for} ##1 \textbf{do}\addtolength{\ALGindent}{1em}}
+  \newcommand{\EndFor}{\addtolength{\ALGindent}{-1em}\State\textbf{end for}}
+  \newcommand{\Repeat}{\State\textbf{repeat}\addtolength{\ALGindent}{1em}}
+  \newcommand{\Until}[1]{\addtolength{\ALGindent}{-1em}\State\textbf{until} ##1}
+}
+\usepackage[top=1in,bottom=1in,left=1in,right=1in]{geometry}
+\usepackage{titletoc}
+\usepackage{setspace}
+\usepackage[colorlinks,allcolors=blue,linktoc=all,bookmarksopen=true,bookmarksnumbered=true]{hyperref}
+\usepackage[round]{natbib}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{microtype}
+\onehalfspacing
+\allowdisplaybreaks
+
+
+\titlecontents{section}[0em]{\vspace{7.5pt}\bfseries}{\thecontentslabel\quad}{}{\titlerule*[0.75pc]{-}\contentspage}
+\titlecontents{subsection}[2em]{}{\thecontentslabel\quad}{}{\titlerule*[0.75pc]{-}\contentspage}
+\titlecontents{subsubsection}[3em]{}{\thecontentslabel\quad}{}{\titlerule*[0.75pc]{-}\contentspage}
+
+% Theorem environments.
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{definition}{Definition}[section]
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{corollary}{Corollary}[section]
+\newtheorem{remark}{Remark}[section]
+\newtheorem{assumption}{Assumption}
+
+% Hyperlinked theorem-like references. With `nameinlink`, the entire
+% reference (e.g. ``Proposition 5.1'') is clickable in the PDF.
+\crefname{theorem}{Theorem}{Theorems}
+\Crefname{theorem}{Theorem}{Theorems}
+\crefname{lemma}{Lemma}{Lemmas}
+\Crefname{lemma}{Lemma}{Lemmas}
+\crefname{proposition}{Proposition}{Propositions}
+\Crefname{proposition}{Proposition}{Propositions}
+\crefname{corollary}{Corollary}{Corollaries}
+\Crefname{corollary}{Corollary}{Corollaries}
+\crefname{definition}{Definition}{Definitions}
+\Crefname{definition}{Definition}{Definitions}
+\crefname{assumption}{Assumption}{Assumptions}
+\Crefname{assumption}{Assumption}{Assumptions}
+
+% Convenience macros.
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Pp}{\mathbb{P}}
+\newcommand{\F}{\mathcal{F}}
+\newcommand{\X}{\mathcal{X}}
+\newcommand{\Ncal}{\mathcal{N}}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\op}{\mathrm{op}}
+\newcommand{\HS}{\mathrm{HS}}
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\ran}{\operatorname{ran}}
+\newcommand{\supp}{\operatorname{supp}}
+\newcommand{\argmin}{\operatorname*{arg\,min}}
+\newcommand{\argmax}{\operatorname*{arg\,max}}
+\newcommand{\esssup}{\operatorname*{ess\,sup}}
+\newcommand{\inner}[2]{\left\langle #1,#2\right\rangle}
+\newcommand{\norm}[1]{\left\lVert #1\right\rVert}
+\newcommand{\abs}[1]{\left\lvert #1\right\rvert}
+\newcommand{\Kx}[1]{K_{#1}}
+\newcommand{\whV}{\widehat V_n}
+\newcommand{\whw}{\widehat\omega}
+\newcommand{\whf}{\widehat f}
+\newcommand{\whth}{\widehat\theta_{\mathrm{GM}}}
+\newcommand{\preceqL}{\preceq}
+\newcommand{\succeqL}{\succeq}
+
+\begin{document}
+
+\title{\textbf{Debiased Inference in RKHS}\\[4pt]\large Extension to Latent Gaussian Confounding}
+\author{Samuel N.E. Lee\thanks{Department of Statistics and Data Science, National University of Singapore.} \and Alexander Giessing\thanks{Department of Statistics and Data Science, National University of Singapore.}}
+\date{September 14, 2026}
+\maketitle
+\tableofcontents
+\newpage
+
+% ============================================================
+\section{Notation}
+% ============================================================
+
+\subsection*{Model and RKHS quantities}
+\begin{itemize}[leftmargin=2em]
+  \item $(X_i,Y_i,E_i)_{i=1}^n$: observations in the second fold $I_2$, with $X_i\in\X=\R^d$, $Y_i\in\R$, and $E_i\in\{e,f\}$. The first fold $I_1$ has size $m$, with $m/n\to\rho\in(0,\infty)$.
+  \item $\nu_g:=\mathcal L(X\mid E=g)$ and $\nu:=\pi_e\nu_e+\pi_f\nu_f$: the pooled marginal law of $X$, where $\pi_g>0$ and $\pi_e+\pi_f=1$; $L_2(\nu)$ is the associated square-integrable function space.
+  \item $\F$: a separable reproducing kernel Hilbert space (RKHS) on $\X$ with continuous kernel $K$.
+  \item $K_x:=K(\cdot,x)\in\F$: the kernel section at $x$, so that $f(x)=\inner{f}{K_x}_{\F}$.
+  \item $f_0\in\F$: the true regression function; $Y_i=f_0(X_i)+H_i^\top\delta_0+\eps_i$.
+  \item $x_0\in\X$: a fixed query point; $\theta_0:=f_0(x_0)$ is the target functional.
+  \item $\bm Y=(Y_1,\ldots,Y_n)^\top$, $\widetilde{\bm Y}=(Y_i-\widehat m_{E_i}(X_i))_{i=1}^n$, and $\bm U=(U_1,\ldots,U_n)^\top$.
+  \item $K\in\R^{n\times n}$: the empirical Gram matrix, $K_{ij}:=K(X_i,X_j)$.
+  \item $k_0\in\R^n$: $(k_0)_i:=K(x_0,X_i)$; $k_{00}:=K(x_0,x_0)$.
+  \item For $f\in\F$, $f(\bm X):=(f(X_1),\ldots,f(X_n))^\top$.
+\end{itemize}
+
+\subsection*{Confounding and environment quantities}
+\begin{itemize}[leftmargin=2em]
+  \item $\Omega_g:=\Gamma^\top\Sigma_H\Gamma+\Sigma_g$, $P_g:=\Omega_g^{-1}$, and $c:=\Gamma^\top\Sigma_H\delta_0$.
+  \item $w_g(x):=P_g(x-\mu_g)$ and $m_g(x):=c^\top P_g(x-\mu_g)$: the conditional mean contribution of the latent confounder in environment $g$.
+  \item $U_i:=H_i^\top\delta_0+\eps_i-m_{E_i}(X_i)$: the corrected error, satisfying $\E[U_i\mid X_i,E_i]=0$.
+  \item $\sigma_{U,g}^2:=\operatorname{Var}(U_i\mid X_i,E_i=g)>0$ and $t_g:=\sigma_{U,g}^{-2}$.
+  \item $\widehat c$, $\widehat P_g$, $\widehat\mu_g$, and $\widehat\sigma_{U,g}^2$: estimates constructed using only $I_1$; $\widehat t_g:=(\widehat\sigma_{U,g}^2)^{-1}$.
+  \item $q_g(x):=\Pr(E=g\mid X=x)$: the posterior environment probability in the working mixture.
+\end{itemize}
+
+\subsection*{Operators and spectral quantities}
+\begin{itemize}[leftmargin=2em]
+  \item $I_\nu:\F\to L_2(\nu)$: canonical embedding, $I_\nu f=[f]_\nu$; $S_\nu:=I_\nu^*$.
+  \item $T_\nu:=I_\nu S_\nu:L_2(\nu)\to L_2(\nu)$ and $C_\nu:=S_\nu I_\nu:\F\to\F$.
+  \item $C_g:=\E[K_X\otimes K_X\mid E=g]$ and $C_\nu=\pi_eC_e+\pi_fC_f$.
+  \item $C_{\nu,n}:=n^{-1}\sum_{i=1}^n K_{X_i}\otimes K_{X_i}$: empirical covariance operator.
+  \item $D_\nu:=\pi_et_eC_e+\pi_ft_fC_f$ and $D_{\nu,n}:=n^{-1}\sum_{i=1}^n\widehat t_{E_i}K_{X_i}\otimes K_{X_i}$: population and empirical precision-weighted covariance operators.
+  \item $\Ncal_{D,x}(\eta):=\inner{K_x}{(D_\nu+\eta I)^{-1}K_x}_{\F}$ and $\widehat\Ncal_{D,x}(\eta):=\inner{K_x}{(D_{\nu,n}+\eta I)^{-1}K_x}_{\F}$.
+  \item $W:=\operatorname{diag}(\widehat\sigma_{U,E_1}^2,\ldots,\widehat\sigma_{U,E_n}^2)$ and $\widetilde S_n:=W^{-1/2}S_n$.
+  \item $\rho_j$ and $\psi_j$: the positive eigenvalues and orthonormal eigenvectors of $D_\nu$; if its rank is finite, $\rho_{\min}^+>0$ denotes its smallest positive eigenvalue.
+  \item $r_\nu:=\operatorname{rank}(C_\nu)\in\mathbb N\cup\{\infty\}$: the number of non-zero eigenvalues of $C_\nu$.
+  \item $\mathcal J_\nu:=\{1,\ldots,r_\nu\}$ if $r_\nu<\infty$, and $\mathcal J_\nu:=\mathbb N$ if $r_\nu=\infty$.
+  \item $\mu_1\ge\mu_2\ge\cdots>0$: the non-zero eigenvalues shared by $T_\nu$ and $C_\nu$, indexed by $j\in\mathcal J_\nu$.
+  \item $\F_\nu:=(\ker I_\nu)^\perp=\overline{\ran(C_\nu)}$: the identifiable subspace of $\F$; when $r_\nu<\infty$, $\F_\nu=\ran(C_\nu)$.
+  \item $\Ncal_\nu(\eta):=\tr\{C_\nu(C_\nu+\eta I)^{-1}\}$: global effective dimension.
+  \item $\Ncal_x(\eta):=\inner{K_x}{(C_\nu+\eta I)^{-1}K_x}_{\F}$: population pointwise regularized leverage score.
+  \item $\widehat{\Ncal}_x(\eta):=\inner{K_x}{(C_{\nu,n}+\eta I)^{-1}K_x}_{\F}$: empirical regularized leverage score.
+  \item For bounded self-adjoint operators $A,B$, $A\preceqL B$ means $B-A$ is positive semidefinite.
+  \item $\norm{A}_{\op}$, $\norm{A}_{\HS}$, and $\norm{A}_{1}$ denote the operator, Hilbert--Schmidt, and trace norms, respectively.
+\end{itemize}
+
+\subsection*{Regularization and debiasing parameters}
+\begin{itemize}[leftmargin=2em]
+  \item $\lambda>0$: KRR penalty 
+  % $\lambda_n\asymp n^{-1/(\beta+p)}$ in the minimax-rate theorem.
+  \item $\eta>0$: regularization parameter for the inverse problem defining the debiasing weights; may be written as $\eta_n$ to emphasize dependence on $n$; $\eta_n\asymp (\log n)^2/n$ in the infinite-rank case and $\eta_n\asymp n^{-1}$ in the finite-rank case in the inferential theory.
+  \item $\gamma\ge0$: RKHS alignment tolerance in the primal GM program; may be written as $\gamma_n$ to emphasize dependence on n.
+  \item $\mu\ge0$: scalar Lagrange multiplier in the dual GM program.
+  \item $p\in(0,1)$: global eigenvalue/effective-dimension exponent in the infinite-rank case $r_\nu=\infty$.
+  \item $\beta\in(1,2]$: source-smoothness exponent for $f_0$ in the infinite-rank case. 
+  \item $a\in(0,1)$: local regular-variation exponent at the fixed query point $x_0$ in the infinite-rank case. In the finite-rank case, the analogous leverage is bounded and behaves as the case $a=0$.
+  \item $\Delta_\omega:=K_{x_0}-n^{-1}\sum_{i=1}^n\omega_iK_{X_i}$: alignment residual generated by weights $\omega\in\R^n$.
+  \item $\widehat V_n:=n^{-1}\sum_{i=1}^n\widehat\sigma_{U,E_i}^2\widehat\omega_i^2$: observable variance proxy; $V_n$ denotes its population version of the variance proxy.
+\end{itemize}
+
+\subsection*{Asymptotic notation}
+For nonnegative sequences $A_n,B_n$, $A_n=O(B_n)$ means $A_n/B_n$ is eventually bounded, $A_n\asymp B_n$ means both $A_n=O(B_n)$ and $B_n=O(A_n)$, and $A_n=o(B_n)$ means $A_n/B_n\to0$. We write $A_n=O_p(B_n)$ if $A_n/B_n$ is bounded in probability and $A_n=o_p(B_n)$ if $A_n/B_n\to0$ in probability. The notation $\overset{d}{\to}$ denotes convergence in distribution and $\overset{p}{\to}$ convergence in probability. Constants denoted by $C,c,A,D$ may change between displays and are independent of $n$.
+
+% ============================================================
+\section{Definitions}
+% ============================================================
+
+\begin{definition}[RKHS and rank-one operators]
+A Hilbert space $\F$ of real-valued functions on $\X$ is an RKHS with kernel $K$ if $K_x\in\F$ for every $x\in\X$ and
+\[
+  f(x)=\inner{f}{K_x}_{\F},\qquad f\in\F.
+\]
+For $g,h\in\F$, the rank-one operator $g\otimes h:\F\to\F$ is
+\[
+  (g\otimes h)f:=\inner{f}{h}_{\F}g.
+\]
+In particular, $K_x\otimes K_x$ is a positive semidefinite rank-one operator in the space of Hilbert--Schmidt operators.
+\end{definition}
+
+\begin{definition}[Canonical embedding and covariance operators]
+Let $I_\nu:\F\to L_2(\nu)$ map $f$ to its $\nu$-equivalence class $[f]_\nu$, and let $S_\nu:=I_\nu^*$. Define
+\[
+  T_\nu:=I_\nu S_\nu:L_2(\nu)\to L_2(\nu),\qquad
+  C_\nu:=S_\nu I_\nu:\F\to\F.
+\]
+Equivalently,
+\[
+  C_\nu f=\E[f(X)K_X]=\E[(K_X\otimes K_X)f].
+\]
+Under a bounded measurable kernel, these operators are positive, self-adjoint, and trace class, hence compact, and they have the same non-zero eigenvalues. We write
+\[
+  r_\nu:=\operatorname{rank}(C_\nu)\in\mathbb N\cup\{\infty\},
+  \qquad
+  \mathcal J_\nu
+  :=
+  \begin{cases}
+    \{1,\ldots,r_\nu\}, & r_\nu<\infty,\\
+    \mathbb N, & r_\nu=\infty.
+  \end{cases}
+\]
+The identifiable subspace is
+\[
+  \F_\nu:=(\ker I_\nu)^\perp=\overline{\ran(C_\nu)}.
+\]
+Since $\F$ is separable, so is the closed subspace $\F_\nu$. Moreover, $K_X\in\F_\nu$ almost surely. This is because for a countable orthonormal basis $(u_j)$ of $\ker I_\nu$, $\inner{K_X}{u_j}_{\F}=u_j(X)=0$ almost surely for every $j$.
+If $r_\nu<\infty$, then $\F_\nu=\ran(C_\nu)$ is finite dimensional. 
+\end{definition}
+
+Let $(\mu_j)_{j\in\mathcal J_\nu}$ denote the non-zero eigenvalues, ordered as $\mu_1\ge\mu_2\ge\cdots>0$. We use functions $(e_j)_{j\in\mathcal J_\nu}\subset\F$ such that $([e_j]_\nu)_{j\in\mathcal J_\nu}$ is an orthonormal basis of $\overline{\ran(I_\nu)}\subseteq L_2(\nu)$ and $(\mu_j^{1/2}e_j)_{j\in\mathcal J_\nu}$ is an orthonormal basis of $\F_\nu$. For later spectral calculations, write $\phi_j:=\mu_j^{1/2}e_j$, so that $(\phi_j)_{j\in\mathcal J_\nu}$ is an orthonormal basis of $\F_\nu$ and $C_\nu\phi_j=\mu_j\phi_j$.
+
+If $r_\nu=\infty$, then by the spectral theorem,
+\begin{align}
+  T_\nu
+  &=\sum_{j\ge1}\mu_j\inner{\,\cdot\,}{[e_j]_\nu}_{L_2(\nu)}[e_j]_\nu,\\
+  C_\nu
+  &=\sum_{j\ge1}\mu_j\inner{\,\cdot\,}{\mu_j^{1/2}e_j}_{\F}\mu_j^{1/2}e_j.
+\end{align}
+If $r_\nu<\infty$, the same spectral representations hold with the finite sums
+\begin{align}
+  T_\nu
+  &=\sum_{j=1}^{r_\nu}\mu_j\inner{\,\cdot\,}{[e_j]_\nu}_{L_2(\nu)}[e_j]_\nu,\\
+  C_\nu
+  &=\sum_{j=1}^{r_\nu}\mu_j\inner{\,\cdot\,}{\mu_j^{1/2}e_j}_{\F}\mu_j^{1/2}e_j.
+\end{align}
+
+
+\begin{definition}[Power spaces]
+For $\alpha\ge0$, define
+\[
+  [\F]^\alpha_\nu
+  :=\left\{
+      \sum_{j\in\mathcal J_\nu}a_j\mu_j^{\alpha/2}[e_j]_\nu:
+      (a_j)_{j\in\mathcal J_\nu}\in\ell_2(\mathcal J_\nu)
+    \right\},
+\]
+with $\alpha$-power norm:
+\[
+  \left\|\sum_{j\in\mathcal J_\nu}a_j\mu_j^{\alpha/2}[e_j]_\nu\right\|_{[\F]^\alpha_\nu}
+  :=\left(\sum_{j\in\mathcal J_\nu}a_j^2\right)^{1/2}.
+\]
+For $0<\eta<\alpha$, $[\F]^\alpha_\nu\hookrightarrow[\F]^\eta_\nu\hookrightarrow L_2(\nu)$, and $[\F]^\alpha_\nu=\ran(T_\nu^{\alpha/2})$ on the identifiable subspace.
+\end{definition}
+
+\begin{definition}[Effective dimensions and leverage scores]
+For $\eta>0$, the global effective dimension is
+\[
+  \Ncal_\nu(\eta):=\tr\!\left(C_\nu(C_\nu+\eta I)^{-1}\right)
+  =\sum_{j\in\mathcal J_\nu}\frac{\mu_j}{\mu_j+\eta}.
+\]
+
+
+For a point $x\in\X$, the population and empirical regularized leverage scores are
+\[
+  \Ncal_x(\eta):=\inner{K_x}{(C_\nu+\eta I)^{-1}K_x}_{\F},\qquad
+  \widehat\Ncal_x(\eta):=\inner{K_x}{(C_{\nu,n}+\eta I)^{-1}K_x}_{\F}.
+\]
+The first quantity can be treated as the local analogue of the effective dimension at $x$ due to the identity $\Ncal_x(\eta) = \tr((K_x \otimes K_x)(C_\nu + \eta I)^{-1})$.
+\end{definition}
+
+\begin{definition}[Sampling operator and empirical covariance]
+\label{defn:sampling_operator}
+Define
+\[
+  S_n:\F\to\R^n,\qquad
+  S_nf:= (f(X_1),\ldots,f(X_n))^\top.
+\]
+Then, on $\R^n$ equipped with the inner product $\inner{u}{v}_n := \frac{1}{n}u^\top v$, 
+\[
+  S_n^*u=\frac1{n}\sum_{i=1}^n u_iK_{X_i},\qquad
+  C_{\nu,n}=S_n^*S_n,\qquad
+  S_nS_n^*=\frac1nK.
+\]
+The precision-weighted sampling operator satisfies
+\[
+ \widetilde S_n^*\widetilde S_n=D_{\nu,n},\qquad
+ \widetilde S_n\widetilde S_n^*=\frac1nW^{-1/2}KW^{-1/2}.
+\]
+\end{definition}
+
+\begin{definition}[Kernel ridge regression]
+For $\lambda>0$, the KRR estimator based on the corrected responses $\widetilde Y_i:=Y_i-\widehat m_{E_i}(X_i)$ is
+\begin{equation}
+  \widehat f_\lambda
+  :=\argmin_{f\in\F}
+  \left\{
+    \frac1n\sum_{i=1}^n(\widetilde Y_i-f(X_i))^2+\lambda\norm{f}_{\F}^2
+  \right\}.
+  \label{eq:krr_definition}
+\end{equation}
+By the representer theorem \cite{wahba1990spline,kimeldorf1971some},
+\[
+  \widehat f_\lambda(\cdot)=\sum_{i=1}^n\widehat\alpha_iK(X_i,\cdot),\qquad
+  \widehat\alpha=(K+n\lambda I_n)^{-1}\widetilde{\bm Y}.
+\]
+\end{definition}
+
+\begin{definition}[Alignment residual and minimum feasible tolerance]
+For $\omega\in\R^n$, define
+\[
+  \Delta_\omega
+  :=K_{x_0}-\frac1n\sum_{i=1}^n\omega_iK_{X_i}.
+\]
+The minimum achievable tolerance is
+\[
+  \gamma_{\min,n}:=\inf_{\omega\in\R^n}\norm{\Delta_\omega}_{\F}.
+\]
+Writing the constraint in Gram-matrix form gives
+\begin{equation}
+  \norm{\Delta_\omega}_{\F}^2
+  =k_{00}-\frac2n k_0^\top\omega+\frac1{n^2}\omega^\top K\omega.
+  \label{eq:alignment_gram_form}
+\end{equation}
+If $K$ is singular, let $K^\dagger$ denote its Moore--Penrose pseudoinverse. Since the augmented Gram matrix is positive semidefinite, $k_0\in\ran(K)$, and therefore
+\begin{equation}
+  \gamma_{\min,n}^2=k_{00}-k_0^\top K^\dagger k_0.
+  \label{eq:gamma_min_closed}
+\end{equation}
+When $K$ is invertible, $K^\dagger=K^{-1}$.
+\end{definition}
+
+% ============================================================
+\section{Model and Assumptions}
+% ============================================================
+
+\begin{assumption}[Generating model and RKHS structure]\label{assump:model}
+The observations $(X_i,Y_i,E_i)$ are independent across $i$ and satisfy
+\begin{align}
+ Y_i&=f_0(X_i)+H_i^\top\delta_0+\eps_i,\label{eq:model}\\
+ X_i\mid(E_i=g)&=\Gamma^\top H_i+\xi_{i,g}+\mu_g,\qquad g\in\{e,f\}.
+ \label{eq:confounding_covariates}
+\end{align}
+Here $H_i\sim N(0,\Sigma_H)$, $\xi_{i,g}\sim N(0,\Sigma_g)$, and $H_i$ and $\xi_{i,g}$ are independent conditional on the environment. The environment is independent of $(H_i,\eps_i)$, and $\eps_i$ is a mean-zero sub-exponential random variable independent of $(H_i,\xi_{i,E_i},E_i)$. The dimensions are fixed and
+\[
+ \Omega_g:=\Gamma^\top\Sigma_H\Gamma+\Sigma_g\succ0,
+ \qquad P_g:=\Omega_g^{-1},\qquad c:=\Gamma^\top\Sigma_H\delta_0.
+\]
+The observations are either sampled i.i.d. from the working mixture, with $\Pr(E=g)=\pi_g>0$, or sampled independently within the two environments with fixed proportions $\pi_g$. For the stratified case, we take these proportions to be the same in each fold, so $n_g/n=m_g/m=\pi_g$.
+
+We split the observations into two independent folds $I_1$ and $I_2$ with sizes $m$ and $n$, where $m/n\to\rho\in(0,\infty)$. Nuisance quantities are estimated using only $I_1$, and the GM estimator is constructed using $I_2$. Within $I_2$, we relabel the observations as $i=1,\ldots,n$.
+
+The true regression function satisfies $f_0\in\F$, where $\F$ is a separable RKHS. The input space is $\X=\R^d$, the marginal distribution $\nu=\pi_e\nu_e+\pi_f\nu_f$ has full support on $\X$, and $K$ is continuous and uniformly bounded:
+\begin{equation}
+ \sup_{x\in\X}K(x,x)\leq\kappa^2<\infty.
+ \label{eq:bounded_kernel}
+\end{equation}
+Under these conditions, the canonical embedding is injective and
+\[
+ \F=\F_\nu=(\ker I_\nu)^\perp=\overline{\ran(C_\nu)}.
+\]
+Lastly, let
+\[
+ w_g(x):=P_g(x-\mu_g),\qquad
+ V:=w_E(X)-\E[w_E(X)\mid X],\qquad M:=\E[VV^\top].
+\]
+We assume $M\succ0$ and $\sigma_{U,g}^2>0$ for $g\in\{e,f\}$, where $\sigma_{U,g}^2$ is defined below.
+\end{assumption}
+
+\begin{remark}
+Continuity of $K$ and full support of $\nu$ make the canonical embedding $I_\nu$ injective. Hence $\F_\nu=\F$.
+\end{remark}
+
+By Gaussian conditioning,
+\begin{equation}
+ \E[Y\mid X=x,E=g]=f_0(x)+c^\top P_g(x-\mu_g).
+ \label{eq:conditional_mean_confounding}
+\end{equation}
+Define
+\begin{equation}
+ U_i:=H_i^\top\delta_0+\eps_i-c^\top P_{E_i}(X_i-\mu_{E_i}).
+ \label{eq:corrected_error}
+\end{equation}
+Then
+\[
+ Y_i-c^\top P_{E_i}(X_i-\mu_{E_i})=f_0(X_i)+U_i,
+ \qquad \E[U_i\mid X_i,E_i]=0.
+\]
+The conditional variance is constant within each environment:
+\begin{equation}
+ \sigma_{U,g}^2
+ =\operatorname{Var}(\eps_i)+\delta_0^\top\Sigma_H\delta_0-c^\top P_gc.
+ \label{eq:environment_variance}
+\end{equation}
+Moreover, the Gaussian regression residual is independent of $X$ within each environment. Since $\eps_i$ is sub-exponential, $U_i\mid(X_i,E_i=g)$ is also a centered sub-exponential random variable.
+
+\begin{remark}
+The condition $M\succ0$ is the identification condition for the confounding parameter $c$. Indeed, $\E[V\mid X]=0$, $\E[VU]=0$, and $\E[Vw_E(X)^\top]=M$. Therefore,
+\[
+ c=M^{-1}\E[VY].
+\]
+For two environments, if $q_g(x):=\Pr(E=g\mid X=x)$, then
+\[
+ M=\E\!\left[q_e(X)q_f(X)\{w_e(X)-w_f(X)\}\{w_e(X)-w_f(X)\}^\top\right].
+\]
+In particular, $P_e-P_f$ having full rank is sufficient for $M\succ0$. This condition is separate from query point non-degeneracy.
+\end{remark}
+
+\begin{assumption}[Conditions for the KRR minimax rate]\label{assump:krr}
+In addition to \Cref{assump:model}, suppose:
+\begin{enumerate}[label=(\alph*),leftmargin=2.2em]
+  \item \textbf{Conditional Bernstein moments.} There exist $L,B_U>0$ such that, for every integer $m\ge2$,
+  \begin{equation}
+    \E[|U_i|^m\mid X_i=x,E_i=g]
+    \le \frac12m!B_U^2L^{m-2}
+    \label{eq:bernstein_moments}
+  \end{equation}
+  for $\nu_g$-almost every $x$ and each $g\in\{e,f\}$. This follows from the generating model with suitable constants $L$ and $B_U$.
+
+  \item \textbf{Spectral behavior.} We distinguish the following two cases.
+  \begin{enumerate}[label=(\roman*),leftmargin=2.2em]
+    \item \textbf{Infinite-rank case.} If $r_\nu=\infty$, assume the two-sided eigenvalue decay condition: for some $0<p<1$ and constants $0<c\le C<\infty$,
+    \begin{equation}
+      c j^{-1/p}\le\mu_j\le Cj^{-1/p},\qquad j\ge1.
+      \label{eq:eigen_decay}
+    \end{equation}
+    The upper bound implies $\Ncal_\nu(\lambda)\le D\lambda^{-p}$ for some $D>0$; the lower bound is needed for the matching minimax lower rate in the oracle regression problem.
+
+    \item \textbf{Finite-rank case.} If $r_\nu<\infty$, assume that $r_\nu$ is fixed and write
+    \begin{equation}
+      \mu_{\min}^+:=\mu_{r_\nu}>0.
+      \label{eq:finite_spectral_gap}
+    \end{equation}
+
+    Also, this implies the bound on the effective dimension $\Ncal_\nu(\lambda)\le r_\nu
+     \text{ for every }\lambda>0.$
+  \end{enumerate}
+
+  \item \textbf{Source condition.} We again distinguish the two cases.
+  \begin{enumerate}[label=(\roman*),leftmargin=2.2em]
+    \item  For some $1<\beta\le2$ and $B>0$,
+    \begin{equation}
+      [f_0]_\nu\in[\F]^\beta_\nu,\qquad
+      \norm{[f_0]_\nu}_{[\F]^\beta_\nu}\le B.
+      \label{eq:source_condition}
+    \end{equation}
+    Equivalently, there exists $[h_0]_\nu$ with $\norm{[h_0]_\nu}_{L_2(\nu)}\le B$ such that $[f_0]_\nu=T_\nu^{\beta/2}[h_0]_\nu$.
+  \end{enumerate}
+\end{enumerate}
+\end{assumption}
+\begin{remark}
+The spectral and source conditions above may instead be imposed separately in each environment, with exponents $p_g\in(0,1)$ and $\beta_g\in(1,2]$. Taking $p=\max_gp_g$ and $\beta=\min_g\beta_g$, \Cref{lem:mixture_source} shows that the pooled operator $C_\nu$ satisfies the displayed conditions. Thus these are the same KRR conditions, written for the working mixture.
+\end{remark}
+\begin{remark}
+For the finite-rank case, the source condition is automatically satisfied since there are only finitely many positive eigenvalues.
+\end{remark}
+\begin{remark}
+These conditions are similar to other papers in the literature examining optimal rates for KRR estimators \cite{blanchard2018optimal,fischer2020sobolev,lin2020optimal}. In the infinite-rank case, the source condition is necessary. Without one, it can be shown that in an infinite-dimensional RKHS ball alone, there is no uniform RKHS-norm rate. The range $\beta>1$ yields consistency in the first power norm, and hence in $\F$ under \Cref{assump:model}. 
+\end{remark}
+
+\begin{remark}
+Under \Cref{assump:model}, for every $\eta>0$,
+\begin{equation}
+  \sup_{x\in\X}\Ncal_x(\eta)
+  \le \frac{\kappa^2}{\eta},
+  \label{eq:bounded_leverage}
+\end{equation}
+since $(C_\nu+\eta I)^{-1}\preceqL\eta^{-1}I$ and $\norm{K_x}_{\F}^2=K(x,x)\le\kappa^2$.
+\end{remark}
+
+\begin{remark}
+    For the finite case, if $r_\nu<\infty$,  \eqref{eq:finite_spectral_gap} from \Cref{assump:krr} implies the following uniform bound
+  \begin{equation}
+    \esssup_{x\sim\nu}\Ncal_x(\eta)
+    \le
+    \frac{\kappa^2}{\mu_{\min}^+}
+    =:A_{\mathrm u}^{\mathrm{fin}}
+    \qquad\text{for all }\eta>0.
+    \label{eq:uniform_leverage_finite}
+  \end{equation}
+\end{remark}
+
+\begin{remark}
+This is the uniform envelope needed for the operator Bernstein inequality used in the proofs for the ratio consistency of the variance proxy and the vanishing of the max-to-sum ratio. In the infinite-rank case, \eqref{eq:bounded_leverage} follows directly from boundedness of the kernel. We choose $\eta_n\asymp (\log n)^2/n$, so that $n\eta_n/\log n\to\infty$. In the finite-rank case, the uniform bound follows directly from the positive spectral gap.
+\end{remark}
+
+\begin{assumption}[Local leverage regular variation at $x_0$]\label{assump:local_leverage}
+ If $r_\nu=\infty$, there exist $A_0>0$ and $0<a<1$ such that
+  \begin{equation}
+    \Ncal_{x_0}(\eta)\sim A_0\eta^{-a}\qquad(\eta\downarrow0).
+    \label{eq:local_regular_variation}
+  \end{equation}
+  As a result, for every fixed $c>0$,
+  \begin{equation}
+    \frac{\Ncal_{x_0}(c\eta)}{\Ncal_{x_0}(\eta)}\to c^{-a}.
+    \label{eq:local_ratio}
+  \end{equation}
+
+\end{assumption}
+
+\begin{remark}
+ For the finite rank case when $r_\nu<\infty$, \Cref{assump:model} implies
+  \begin{equation}
+    \Ncal_{x_0}(\eta)
+    \longrightarrow
+    \inner{K_{x_0}}{C_\nu^\dagger K_{x_0}}_{\F}
+    =:A_0^{\mathrm{fin}}
+    \in(0,\infty)
+    \qquad(\eta\downarrow0),
+    \label{eq:local_finite_limit}
+  \end{equation}
+  and, for every fixed $c>0$,
+  \begin{equation}
+    \frac{\Ncal_{x_0}(c\eta)}{\Ncal_{x_0}(\eta)}
+    \longrightarrow 1.
+    \label{eq:local_ratio_finite}
+  \end{equation}
+\end{remark}
+\begin{remark}
+The local leverage assumption and the bounded-kernel leverage bound serve different purposes. Equation~\eqref{eq:bounded_leverage} controls random design points uniformly. \Cref{assump:local_leverage} determines the variance scale at the fixed point $x_0$. In the infinite-rank case, for the Mat\'ern kernels covered by the local regularized-Christoffel asymptotics of \citet{pauwels2018relating}, those results imply this condition when their kernel hypotheses hold and the design density is bounded, continuous, and strictly positive at $x_0$, with
+\[
+  a=\frac{d}{2\nu_{\mathrm M}+d}.
+\]
+Thus a nondegenerate Gaussian mixture satisfies the stated density conditions at any fixed $x_0$, while boundedness of the kernel supplies \eqref{eq:bounded_leverage} on all of $\R^d$. In the finite-rank case, the leverage remains bounded and converges to \eqref{eq:local_finite_limit}; this corresponds to the case $a=0$ rather than a regularly varying divergence.
+\end{remark}
+
+\begin{assumption}[Query point non-degeneracy]\label{assump:nondegeneracy}
+We assume $k_0=(K(x_0,X_1),\ldots,K(x_0,X_n))^\top$ is non-zero almost surely. This implies that the objective function in \Cref{prop:gm_dual} is strictly concave, which is necessary to show $\mu_n^\star=\eta_n^{-1}$ in \Cref{prop:regularized_gamma}.
+\end{assumption}
+
+\begin{remark}
+    A Mat\'ern kernel, for example, automatically fulfills this condition since its values are strictly positive for every finite Euclidean distance between $x_0$ and $X_i$.
+\end{remark}
+
+
+% ============================================================
+
+\begin{remark}
+The CLT under estimated confounding below concerns the infinite-rank case $0<a<1$. The finite-rank statements are retained for the KRR rate, alignment, and variance calculations. In finite rank, first-fold nuisance estimation need not be negligible under the same studentization.
+\end{remark}
+
+\section{Methodology}
+% ============================================================
+
+Given data from \Cref{assump:model}, the goal is pointwise inference for $\theta_0=f_0(x_0)$. We first estimate the confounding quantities using $I_1$. The procedure for constructing a GM debiasing estimator on $I_2$ then consists of three parts: a regularized pilot estimate, minimum-variance balancing weights, and a one-step residual correction.
+
+For each environment, estimate $\mu_g$ and $\Omega_g$ from the observations in $I_1$, and set $\widehat P_g=\widehat\Omega_g^{-1}$. Write $\varphi_g$ and $\widehat\varphi_g$ for the population and fitted Gaussian densities. Define
+\[
+ q_g(x)=\frac{\pi_g\varphi_g(x)}{\sum_h\pi_h\varphi_h(x)},\qquad
+ \widehat q_g(x)=\frac{\widehat\pi_g\widehat\varphi_g(x)}{\sum_h\widehat\pi_h\widehat\varphi_h(x)}.
+\]
+For fixed environment proportions, take $\widehat\pi_g=\pi_g$; for i.i.d. mixture sampling, use the first-fold proportions. For $i\in I_1$, let
+\[
+ \widehat V_i=\widehat P_{E_i}(X_i-\widehat\mu_{E_i})
+ -\sum_g\widehat q_g(X_i)\widehat P_g(X_i-\widehat\mu_g).
+\]
+Then set
+\begin{equation}
+ \widehat M=\frac1m\sum_{i\in I_1}\widehat V_i\widehat V_i^\top,
+ \qquad \widehat h=\frac1m\sum_{i\in I_1}\widehat V_iY_i,
+ \qquad \widehat c=(\widehat M+\tau_m I_d)^{-1}\widehat h,
+ \label{eq:nuisance_estimation}
+\end{equation}
+where $\tau_m=0$ or, for example, $\tau_m=m^{-1}$. More generally, $\tau_m=O(m^{-1/2})$ suffices. Estimates are defined arbitrarily on the vanishing-probability events where an inverse does not exist. Define
+\[
+ \widehat m_g(x):=\widehat c^\top\widehat P_g(x-\widehat\mu_g),
+ \qquad \widetilde Y_i:=Y_i-\widehat m_{E_i}(X_i).
+\]
+The two error variances are estimated from first-fold corrected KRR residuals as described below. All these quantities are held fixed when constructing the GM estimator on $I_2$.
+
+\begin{definition}[GM debiasing estimator]\label{def:gm_estimator}
+Fix a query point $x_0\in\X$.
+
+\medskip
+\noindent\textbf{Step 1 (KRR pilot).} Compute
+\begin{equation}
+  \widehat f_{\lambda}
+  =\argmin_{f\in\F}
+  \left\{
+    \frac1n\sum_{i=1}^n(\widetilde Y_i-f(X_i))^2+\lambda\norm{f}_{\F}^2
+  \right\}.
+  \label{eq:krr_pilot}
+\end{equation}
+Equivalently, $\widehat\alpha=(K+n\lambda I)^{-1}\widetilde{\bm Y}$ and $\widehat f_\lambda(x)=k_x^\top\widehat\alpha$, where $k_x=(K(x,X_1),\ldots,K(x,X_n))^\top$.
+
+\medskip
+\noindent\textbf{Step 2 (GM debiasing weights).} For a tolerance $\gamma\ge0$, solve
+\begin{equation}
+  \widehat\omega
+  \in\argmin_{\omega\in\R^n}\frac1n\omega^\top W\omega
+  \quad\text{subject to}\quad
+  \norm{K_{x_0}-\frac1n\sum_{i=1}^n\omega_iK_{X_i}}_{\F}\le\gamma.
+  \label{eq:gm_primal}
+\end{equation}
+
+\medskip
+\noindent\textbf{Step 3 (one-step correction).} Define
+\begin{equation}
+  \widehat\theta_{\mathrm{GM}}
+  :=\widehat f_\lambda(x_0)
+  +\frac1n\widehat\omega^\top\{\widetilde{\bm Y}-\widehat f_\lambda(\bm X)\}.
+  \label{eq:gm_estimator}
+\end{equation}
+\end{definition}
+
+We have the following identity:
+\begin{equation}
+  \widehat\theta_{\mathrm{GM}}-\theta_0
+  =\frac1n\widehat\omega^\top\bm U
+  +\inner{\widehat f_\lambda-f_0}{\Delta_{\widehat\omega}}_{\F}
+  +R_{\mathrm{nuis},n},
+  \label{eq:gm_decomposition}
+\end{equation}
+where
+\[
+ R_{\mathrm{nuis},n}:=\frac1n\sum_{i=1}^n\widehat\omega_i
+ \{m_{E_i}(X_i)-\widehat m_{E_i}(X_i)\}.
+\]
+And thus,
+\[
+  \abs{\inner{\widehat f_\lambda-f_0}{\Delta_{\widehat\omega}}_{\F}}
+  \le\norm{\widehat f_\lambda-f_0}_{\F}\,\norm{\Delta_{\widehat\omega}}_{\F}
+  \le \gamma\norm{\widehat f_\lambda-f_0}_{\F}.
+\]
+The GM primal program in \eqref{eq:gm_primal} therefore directly trades estimated conditional variance, proportional to $\omega^\top W\omega$, against the worst-case RKHS alignment error.
+
+\begin{remark}[When exact alignment is possible]
+The condition $\gamma=0$ is equivalent to
+\[
+  K_{x_0}\in\operatorname{span}\{K_{X_1},\ldots,K_{X_n}\},
+\]
+
+In a finite-dimensional RKHS, exact alignment can occur once the sampled feature vectors span the feature space. More generally, if $C_\nu$ has finite rank and $K_{x_0}\in\F$, exact alignment can occur once the sampled kernel sections span $\F$. For the inhomogeneous degree-$q$ polynomial kernel on $\R^p$, the feature-space dimension is $\binom{p+q}{q}$, so exact alignment can occur once $n\geq\binom{p+q}{q}$ and the sampled kernel sections span the feature space (for example, when $\binom{p+q}{q}$ of them are linearly independent). In contrast, for a strictly positive-definite infinite-dimensional kernel under an infinite-rank design and distinct points $x_0,X_1,\ldots,X_n$, the kernel representations $K_{x_0},K_{X_1},\dots,K_{X_n}$ are linearly independent, so exact alignment is impossible with finitely many observations.
+\end{remark}
+
+\subsection{Dual formulation and numerical solution}
+
+
+\begin{proposition}[Dual of the GM debiasing program]
+\pdfbookmark[2]{Proposition \theproposition}{proposition.bookmark.\theproposition}
+\label{prop:gm_dual}
+Let $K$, $k_0$, and $k_{00}$ be as defined above. Suppose Slater's condition holds, or equivalently, there exists a weight vector with strictly smaller alignment error than $\gamma$. In particular, using \eqref{eq:gamma_min_closed}, strict feasibility holds if and only if
+\[
+  \gamma^2>\gamma_{\min,n}^2
+  =k_{00}-k_0^\top K^\dagger k_0.
+\]
+Then the following statements hold:
+\begin{enumerate}[label=(\roman*)]
+
+  \item The primal program \eqref{eq:gm_primal} is equivalent to the one-dimensional concave dual
+  \begin{equation}
+    \max_{\mu\ge0}
+    \left\{
+    \mu(k_{00}-\gamma^2)
+    -\frac{\mu^2}{n^2}k_0^\top
+    \left(\frac1nW+\frac{\mu}{n^2}K\right)^{-1}k_0
+    \right\},
+    \label{eq:gm_dual}
+  \end{equation}
+  and the primal weights are recovered by
+  \begin{equation}
+    \widehat\omega
+    =\frac{\mu^\star}{n}
+    \left(\frac1nW+\frac{\mu^\star}{n^2}K\right)^{-1}k_0.
+    \label{eq:dual_weight_recovery}
+  \end{equation}
+
+  \item If $\widetilde K:=W^{-1/2}KW^{-1/2}=U\Lambda U^\top$ with
+  $\Lambda=\operatorname{diag}(\lambda_1,\ldots,\lambda_n)$ and
+  $a:=U^\top W^{-1/2}k_0$, then the dual objective is
+  \begin{equation}
+    f(\mu)
+    =(k_{00}-\gamma^2)\mu
+    -\sum_{j=1}^n\frac{a_j^2\mu^2}{n+\lambda_j\mu},
+    \label{eq:dual_eigenbasis}
+  \end{equation}
+  with
+  \begin{align}
+    f'(\mu)
+    &=k_{00}-\gamma^2-
+    \sum_{j=1}^n a_j^2
+    \frac{\mu(2n+\lambda_j\mu)}
+    {(n+\lambda_j\mu)^2},
+    \label{eq:dual_first_derivative}\\
+    f''(\mu)
+    &=-\sum_{j=1}^n
+    a_j^2\frac{2n^2}
+    {(n+\lambda_j\mu)^3}
+    \leq 0.
+    \label{eq:dual_second_derivative}
+  \end{align}
+
+\end{enumerate}
+\end{proposition}
+
+
+
+\hyperref[proof:gm_dual]{A proof of Proposition~\ref*{prop:gm_dual}} can be found in \Cref{sec:additional_proofs}. 
+
+To solve the GM dual program as stated in \eqref{eq:gm_dual}, a Newton--Raphson algorithm can be implemented as outlined in Algorithm~\ref{alg:newton_dual}.
+
+\begin{algorithm}[ht]
+\caption{Newton method for the GM dual}
+\label{alg:newton_dual}
+\begin{algorithmic}[1]
+\Require Eigendecomposition $W^{-1/2}KW^{-1/2}=U\Lambda U^\top$, $a=U^\top W^{-1/2}k_0$, $k_{00}$, $\gamma^2$, tolerance $\mathrm{tol}$.
+\If{$k_{00}-\gamma^2\le0$}
+  \State \Return $\widehat\mu=0$.
+\EndIf
+\State Set $\mu_L\gets0$ and obtain $\mu_U$ with $f'(\mu_U)<0$ by repeated doubling.
+\State Set $\mu\gets\mu_U/2$.
+\Repeat
+  \State Update the bracket using the sign of $f'(\mu)$.
+  \State Set $\mu_{\mathrm{new}}\gets\mu-f'(\mu)/f''(\mu)$.
+  \If{$\mu_{\mathrm{new}}\notin(\mu_L,\mu_U)$ or is non-finite}
+    \State $\mu_{\mathrm{new}}\gets(\mu_L+\mu_U)/2$.
+  \EndIf
+  \State $\mu\gets\mu_{\mathrm{new}}$.
+\Until{$|f'(\mu)|<\mathrm{tol}$}
+\State Recover $\widehat\omega=\mu n\,W^{-1/2}U\{a_j/(n+\mu\lambda_j)\}_{j=1}^n$.
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Variance estimation and studentization}
+Under conditional homoskedasticity within each environment, the leading noise variance is
+\begin{equation}
+ \operatorname{Var}\!\left(\frac1n\widehat\omega^\top\bm U
+ \,\middle|\,I_1,\bm X,\bm E\right)
+ =\frac1{n^2}\sum_{g\in\{e,f\}}\sigma_{U,g}^2
+      \sum_{i:E_i=g}\widehat\omega_i^2.
+ \label{eq:conditional_variance}
+\end{equation}
+In the implementation, the two variances are estimated from corrected KRR residuals using only $I_1$. Fit $\widehat f_{\lambda_m}^{(1)}$ on the first-fold corrected responses, with $\lambda_m\asymp m^{-1/(\beta+p)}$ in the infinite-rank case and $\lambda_m=O(m^{-1/2})$ in the finite-rank case. An estimator for $\sigma_{U,g}^2$ is thus
+\begin{equation}
+ \widehat\sigma_{U,g}^2
+ :=\max\left\{m^{-1},\frac1{m_g}\sum_{i\in I_1:E_i=g}
+ \{Y_i-\widehat m_g(X_i)-\widehat f_{\lambda_m}^{(1)}(X_i)\}^2\right\}.
+ \label{eq:sigma_hat}
+\end{equation}
+The lower truncation ensures that $W$ is positive definite. It has no asymptotic effect, since $\sigma_{U,g}^2>0$.
+
+The asymptotic variance of our GM estimator can then be estimated by
+\begin{equation}
+ \widehat{\operatorname{Var}}_{\mathrm{asy}}(\widehat\theta_{\mathrm{GM}})
+ :=\frac1{n^2}\sum_{g\in\{e,f\}}\widehat\sigma_{U,g}^2
+     \sum_{i:E_i=g}\widehat\omega_i^2
+ =\frac1n\widehat V_n,
+ \label{eq:implemented_variance}
+\end{equation}
+where $\widehat V_n:=n^{-1}\widehat\omega^\top W\widehat\omega$. The standard error is $\sqrt{\widehat V_n/n}$. The same observations in $I_1$ may be used for the nuisance estimates, the first-fold KRR fit, and the residual variance estimates; consistency is proved in \Cref{prop:noise_variances}.
+
+\subsection{Wild-bootstrap variance procedure}
+
+Alternatively, the variance of the GM estimator can be estimated by a fixed-design wild bootstrap, conditional on the first-fold nuisance and variance estimates.
+This procedure aims to calculate the variance and covariance portions contributed by $\frac1n\widehat\omega^\top\{\widetilde{\bm Y}-\widehat f_\lambda(\bm X)\}$. However, under the asymptotic theory below, the additional alignment contribution is negligible. This conditional procedure does not estimate the finite-sample variation from fitting the first-fold nuisances. That contribution is asymptotically negligible in the infinite-rank CLT proved below. The wild bootstrap procedure is outlined in~\ref{alg:wild_bootstrap}.
+
+\begin{algorithm}[ht]
+\caption{Wild bootstrap for the GM estimator}
+\label{alg:wild_bootstrap}
+\begin{algorithmic}[1]
+\Require Second-fold KRR fit $\widehat f_\lambda$, fixed design $\bm X$, query point $x_0$, GM tolerance $\gamma^2$, number of replicates $B$.
+\State Compute residuals $r_i=\widetilde Y_i-\widehat f_\lambda(X_i)$.
+\State Hold the first-fold nuisance estimates and the matrix $W$ fixed.
+\For{$b=1,\ldots,B$}
+  \State Draw Rademacher (or Mammen) multipliers $v_i^{(b)}$.
+  \State Set $\eps_i^{*(b)}=v_i^{(b)}r_i$ and $\widetilde Y_i^{*(b)}=\widehat f_\lambda(X_i)+\eps_i^{*(b)}$.
+  \State Refit KRR with the same $\lambda$ to obtain $\widehat f_\lambda^{*(b)}$.
+  \State Re-solve the GM weight program using the fixed design, fixed $W$, and the same $\gamma^2$.
+  \State Record the stochastic component $S_b=n^{-1}(\widehat\omega^{*(b)})^\top\bm\eps^{*(b)}$.
+  \State Record the alignment component
+  \[
+    B_b=\inner{\widehat f_\lambda^{*(b)}-\widehat f_\lambda}
+    {K_{x_0}-n^{-1}\sum_i\widehat\omega_i^{*(b)}K_{X_i}}_{\F}.
+  \]
+\EndFor
+\State Return the bootstrap sample variance of $(B_b+S_b)$ together with the individual bootstrap sample variances of $B_b$, $S_b$, and the bootstrap sample covariance of $(B_b,S_b)$.
+\end{algorithmic}
+\end{algorithm}
+
+\clearpage
+\newpage
+\section{Main Proofs}
+
+\begin{theorem}[CLT for the RKHS Gauss--Markov estimator]\label{thm:clt}
+\pdfbookmark[2]{Theorem \thetheorem}{theorem.bookmark.\thetheorem}
+Suppose Assumptions~\ref{assump:model}--\ref{assump:nondegeneracy} hold, $r_\nu=\infty$, and set the tolerance parameter
+\[
+ \gamma_n=\norm{\eta_n(D_{\nu,n}+\eta_n I)^{-1}K_{x_0}}_{\F},
+ \qquad \eta_n\asymp(\log n)^2/n.
+\]
+Choose the KRR pilot regularization as $\lambda_n\asymp n^{-1/(\beta+p)}$, and construct the nuisance and variance estimates from $I_1$ as in \Cref{def:gm_estimator} and \eqref{eq:nuisance_estimation}--\eqref{eq:sigma_hat}, with $\tau_m=O(m^{-1/2})$. Then
+\begin{equation}
+ \frac{\sqrt n\,(\widehat\theta_{\mathrm{GM}}-\theta_0)}{\sqrt{\widehat V_n}}
+ \overset d\longrightarrow N(0,1),
+ \qquad \widehat V_n:=\frac1n\sum_{i=1}^n\widehat\sigma_{U,E_i}^2\widehat\omega_i^2.
+ \label{eq:clt}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+By \eqref{eq:gm_decomposition},
+\begin{align}
+ \frac{\sqrt n(\widehat\theta_{\mathrm{GM}}-\theta_0)}{\sqrt{\widehat V_n}}
+ &=\underbrace{\frac{\widehat\omega^\top\bm U}{\sqrt{n\widehat V_n}}}_{A_n}
+ +\underbrace{\frac{\sqrt n}{\sqrt{\widehat V_n}}
+   \inner{\widehat f_{\lambda_n}-f_0}{\Delta_{\widehat\omega}}_{\F}}_{B_n}
+ +\underbrace{\frac{\sqrt n\,R_{\mathrm{nuis},n}}{\sqrt{\widehat V_n}}}_{C_n}.
+ \label{eq:clt_decomposition}
+\end{align}
+We first show that the bias term $B_n$ vanishes as $n\to\infty$. By feasibility and Cauchy--Schwarz,
+\[
+ \abs{\inner{\widehat f_{\lambda_n}-f_0}{\Delta_{\widehat\omega}}_{\F}}
+ \leq\gamma_n\norm{\widehat f_{\lambda_n}-f_0}_{\F}.
+\]
+\Cref{prop:regularized_gamma} gives $\gamma_n^2=O_p(\eta_n^{1-a})$.
+\Cref{prop:variance_consistency} gives $\widehat V_n/V_n\to_p1$ and $V_n\asymp\eta_n^{-a}$. Therefore, since $n\eta_n\asymp(\log n)^2$,
+\begin{align*}
+ \frac{\sqrt n}{\sqrt{\widehat V_n}}
+ \abs{\inner{\widehat f_{\lambda_n}-f_0}{\Delta_{\widehat\omega}}_{\F}}
+ &\leq\left(\frac{V_n}{\widehat V_n}\right)^{1/2}
+ \left(\frac{n\gamma_n^2}{V_n}\right)^{1/2}\norm{\widehat f_{\lambda_n}-f_0}_{\F}\\
+ &=O_p(\sqrt{n\eta_n})\norm{\widehat f_{\lambda_n}-f_0}_{\F}\\
+ &=O_p\!\left((\log n)n^{-(\beta-1)/\{2(\beta+p)\}}\right)=o_p(1),
+\end{align*}
+where the last step is \Cref{thm:krr_rate} and $\beta>1$.
+
+Next, we show that the nuisance term $C_n$ vanishes. Write
+\[
+ a_g:=P_gc,\qquad b_g:=-c^\top P_g\mu_g,
+ \qquad m_g(x)=a_g^\top x+b_g,
+\]
+and use hats for the corresponding plug-in estimates. By \Cref{prop:nuisance_rates}, their errors are $O_p(m^{-1/2})$. We have the exact identity
+\begin{align*}
+ R_{\mathrm{nuis},n}
+ &=\sum_g(a_g-\widehat a_g)^\top
+ \frac1n\sum_{i=1}^n\widehat\omega_i\mathbf1\{E_i=g\}X_i\\
+ &\quad+\sum_g(b_g-\widehat b_g)
+ \frac1n\sum_{i=1}^n\widehat\omega_i\mathbf1\{E_i=g\}.
+\end{align*}
+Each of the finitely many features $\mathbf1\{E=g\}X_j$ and $\mathbf1\{E=g\}$ is square-integrable. \Cref{lem:weighted_moments} therefore implies
+\[
+ R_{\mathrm{nuis},n}=o_p\!\left(m^{-1/2}\sqrt{V_n}\right),\qquad
+ C_n=o_p\!\left(\sqrt{n/m}\right)=o_p(1).
+\]
+This proves the required nuisance remainder bound from the generating model and first-fold estimation; it is not an additional assumption.
+
+Next, we show that, conditional on the first fold and the second-fold covariates and environment labels, $A_n$ converges in distribution to $N(0,1)$ in probability. Denote this information by $\mathcal G_n$. The variables $U_i$ are conditionally independent and centered. Their conditional variance gives
+\[
+ V_n^{\mathrm{noise}}:=\frac1n\sum_{i=1}^n\sigma_{U,E_i}^2\widehat\omega_i^2,
+ \qquad
+ \abs{\frac{V_n^{\mathrm{noise}}}{\widehat V_n}-1}
+ \leq\max_g\abs{\frac{\sigma_{U,g}^2}{\widehat\sigma_{U,g}^2}-1}
+ \overset p\longrightarrow0
+\]
+by \Cref{prop:noise_variances}. The conditional Bernstein condition gives a uniform fourth-moment bound. Thus
+\[
+ \frac{\sum_i\E[(\widehat\omega_iU_i)^4\mid\mathcal G_n]}
+ {\{\sum_i\widehat\omega_i^2\sigma_{U,E_i}^2\}^2}
+ \leq C\frac{\max_i\widehat\omega_i^2}{\sum_i\widehat\omega_i^2}
+ \overset p\longrightarrow0
+\]
+by \Cref{prop:max_sum}. Hence the conditional Lyapunov condition is fulfilled, and the conditional CLT gives convergence of the noise sum normalized by $\sqrt{nV_n^{\mathrm{noise}}}$ to $N(0,1)$ in probability. Ratio consistency replaces $V_n^{\mathrm{noise}}$ by $\widehat V_n$.
+
+Finally, we employ an argument using bounded continuous functions to upgrade our result to unconditional convergence in distribution. For every bounded continuous function $g$,
+\[
+ \E[g(A_n)\mid\mathcal G_n]\overset p\longrightarrow\E[g(Z)],\qquad Z\sim N(0,1).
+\]
+The conditional expectations are uniformly bounded, so convergence in probability to the constant also implies convergence in $L_1$. Therefore $\E[g(A_n)]\to\E[g(Z)]$. Combining with $B_n=C_n=o_p(1)$ and Slutsky's theorem proves the result.
+\end{proof}
+
+\begin{theorem}[Minimax RKHS-norm rate for KRR]\label{thm:krr_rate}
+\pdfbookmark[2]{Theorem \thetheorem}{theorem.bookmark.\thetheorem}
+Suppose Assumptions~\ref{assump:model} and \ref{assump:krr} hold, and use the first-fold nuisance estimates with $\tau_m=O(m^{-1/2})$. Then the following statements hold.
+
+\begin{enumerate}[label=(\roman*),leftmargin=2.2em]
+  \item \textbf{Infinite-rank case.} Suppose $r_\nu=\infty$, $1<\beta\le2$, and let
+  \[
+    \lambda_n\asymp n^{-1/(\beta+p)}.
+  \]
+  Then
+  \begin{equation}
+    \norm{\widehat f_{\lambda_n}-f_0}_{\F}
+    =O_p\!\left(n^{-(\beta-1)/\{2(\beta+p)\}}\right).
+    \label{eq:krr_rate}
+  \end{equation}
+  The polynomial exponent is the same as in the oracle regression problem satisfying the two-sided eigenvalue and source conditions.
+
+  \item \textbf{Finite-rank case.} Suppose $r_\nu<\infty$ and \eqref{eq:finite_spectral_gap} holds. If $\lambda_n\to0$, then
+  \begin{equation}
+    \norm{\widehat f_{\lambda_n}-f_0}_{\F}
+    =O_p\!\left(n^{-1/2}+\lambda_n\right).
+    \label{eq:krr_rate_finite}
+  \end{equation}
+  In particular, if $\lambda_n=O(n^{-1/2})$, then
+  \begin{equation}
+    \norm{\widehat f_{\lambda_n}-f_0}_{\F}
+    =O_p(n^{-1/2}).
+    \label{eq:krr_rate_finite_parametric}
+  \end{equation}
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+We treat the two cases separately.
+
+\medskip
+\noindent\textbf{Infinite-rank case.}
+Let $\widehat f_{\lambda_n}^{\circ}$ be the KRR fit using oracle responses $f_0(X_i)+U_i$. \Cref{lem:first_power_isometry} identifies the RKHS norm on $\F$ with the first power-space norm. The usual oracle rate agrees with Theorems 1 and 2 of \citet{fischer2020sobolev}. We give a direct bound which also applies to the two fixed strata.
+
+Put $s=(\beta-1)/2$, so the source condition gives $f_0=C_\nu^sv$ for a fixed $v\in\F$. By \Cref{lem:operator_bernstein}, $C_{\nu,n}+\lambda_n I\succeq(1-o_p(1))(C_\nu+\lambda_n I)$ since $n\lambda_n/\log n\to\infty$. The KRR normal equation and the spectral theorem yield
+\begin{align*}
+ \norm{\widehat f_{\lambda_n}^{\circ}-f_0}_{\F}
+ &\leq\norm{\lambda_n(C_{\nu,n}+\lambda_n I)^{-1}C_\nu^sv}_{\F}\\
+ &\quad+\norm{(C_{\nu,n}+\lambda_n I)^{-1}\frac1n\sum_iU_iK_{X_i}}_{\F}\\
+ &=O_p\!\left(\lambda_n^s+(n\lambda_n^{1+p})^{-1/2}\right).
+\end{align*}
+For the bias term, use $\norm{\lambda_n(C_{\nu,n}+\lambda_n I)^{-1}C_\nu^sv}\lesssim\sqrt{\lambda_n}\norm{(C_\nu+\lambda_n I)^{-1/2}C_\nu^sv}\lesssim\lambda_n^s\norm v$. For the noise term, regularized operator comparison and
+\[
+ \E\left\|(C_\nu+\lambda_n I)^{-1/2}\frac1n\sum_iU_iK_{X_i}\right\|_{\F}^2
+ \leq\frac{\max_g\sigma_{U,g}^2}{n}\Ncal_\nu(\lambda_n)
+ \lesssim\frac{\lambda_n^{-p}}n
+\]
+give the displayed bound. The chosen $\lambda_n$ gives the stated oracle rate.
+
+Let $r_i=m_{E_i}(X_i)-\widehat m_{E_i}(X_i)$. \Cref{prop:nuisance_rates} and the Gaussian second moments give $n^{-1}\sum_i r_i^2=O_p(m^{-1})$. The deterministic KRR perturbation bound is
+\[
+ \norm{\widehat f_{\lambda_n}-\widehat f_{\lambda_n}^{\circ}}_{\F}
+ \leq\frac1{2\sqrt{\lambda_n}}\left(\frac1n\sum_i r_i^2\right)^{1/2}
+ =O_p((m\lambda_n)^{-1/2}),
+\]
+since $\sup_{t\geq0}\sqrt t/(t+\lambda_n)=1/(2\sqrt{\lambda_n})$. This rate is faster than the oracle rate when $m\asymp n$, proving \eqref{eq:krr_rate}. The same proof applies to the first-fold KRR fit using its own nuisance estimates: the affine coefficient errors factor out of empirical second moments, so no independence within $I_1$ is needed for this perturbation bound.
+
+\medskip
+\noindent\textbf{Finite-rank case.}
+The KRR normal equation gives
+\[
+  (C_{\nu,n}+\lambda_n I)\widehat f_{\lambda_n}
+  =
+  C_{\nu,n}f_0+\frac1n\sum_{i=1}^n(U_i+r_i)K_{X_i}.
+\]
+
+Subtracting $(C_{\nu,n}+\lambda_n I) f_0$  on both sides gives
+
+\begin{equation}
+  \widehat f_{\lambda_n}-f_0
+  =
+  (C_{\nu,n}+\lambda_n I)^{-1}
+  \left(\frac1n\sum_{i=1}^n(U_i+r_i)K_{X_i}\right)
+  -
+  \lambda_n(C_{\nu,n}+\lambda_n I)^{-1}f_0,
+  \label{eq:krr_finite_decomp}
+\end{equation}
+Since $r_\nu<\infty$ and $C_\nu\succeqL\mu_{\min}^+I$, boundedness of the kernel gives
+\[
+  \E\norm{C_{\nu,n}-C_\nu}_{\HS}^2
+  \leq
+  \frac1n\E\norm{K_X\otimes K_X-C_\nu}_{\HS}^2
+   \leq
+  \frac1n\E\norm{K_X\otimes K_X}_{\HS}^2
+  =O(n^{-1}).
+\]
+Since $\norm{\cdot}_{\op}\le\norm{\cdot}_{\HS}$, using Chebyshev's inequality, we get
+\[
+  \norm{C_{\nu,n}-C_\nu}_{\op}=O_p(n^{-1/2}),
+\]
+
+Note that 
+\[C_{\nu,n} \succeq C_\nu - \|C_{\nu,n} - C_{\nu}\|_{\op} I \succeq \mu^+_{\min}I - \|C_{\nu,n} - C_{\nu}\|_{\op} I\] 
+
+Therefore, as $n \to \infty$, we have 
+\[
+  \Pp\!\left(
+  C_{\nu,n}\succeqL\frac{\mu_{\min}^+}{2}I
+  \right)\longrightarrow1.
+\]
+On this event,
+\[
+  \norm{(C_{\nu,n}+\lambda_n I)^{-1}}_{\op}
+  \le\frac{2}{\mu_{\min}^+}.
+\]
+Moreover, using $\E[U_i\mid X_i,E_i]=0$, $\E[U_i^2\mid X_i,E_i]\leq\max_g\sigma_{U,g}^2$, and $\norm{K_{X_i}}_{\F}\le\kappa$,
+\[
+  \E\left\|
+  \frac1n\sum_{i=1}^nU_iK_{X_i}
+  \right\|_{\F}^2
+  \le
+  \frac{(\max_g\sigma_{U,g}^2)\kappa^2}{n}.
+\]
+Also,
+\[
+ \norm{\frac1n\sum_i r_iK_{X_i}}_{\F}
+ \leq\kappa\left(\frac1n\sum_i r_i^2\right)^{1/2}=O_p(m^{-1/2}).
+\]
+Thus the first term in \eqref{eq:krr_finite_decomp} is $O_p(n^{-1/2})$ and the second is $O_p(\lambda_n)$, proving \eqref{eq:krr_rate_finite}. Letting $\lambda_n=O(n^{-1/2})$, we thus prove our claim.
+\end{proof}
+
+
+\begin{proposition}
+[Rate from regularized choice of $\gamma_n$]
+\pdfbookmark[2]{Proposition \theproposition}{proposition.bookmark.\theproposition}
+\label{prop:regularized_gamma}
+Suppose Assumptions~\ref{assump:model}--\ref{assump:nondegeneracy} hold. For $\eta>0$, define
+\[
+  R_n^2(\eta)
+  :=\norm{\eta(D_{\nu,n}+\eta I)^{-1}K_{x_0}}_{\F}^2.
+\]
+Choose $\gamma_n^2=R_n^2(\eta_n)$. Then the following statements hold:
+\begin{enumerate}[label=(\roman*)]
+  \item Slater's condition holds, and the unique dual optimum is
+  \[
+    \mu_n^\star=\eta_n^{-1}.
+  \]
+
+  \item If $\eta_n\asymp (\log n)^2/n$ and $r_\nu=\infty$, then
+  \[
+    \gamma_n=O_p\!\left(n^{-(1-a)/2}(\log n)^{1-a}\right),
+    \qquad
+    \mu_n^\star\asymp \frac{n}{(\log n)^2}.
+  \]
+
+  \item If $\eta_n\asymp n^{-1}$ and $r_\nu<\infty$, then
+  \[
+    \gamma_n=O_p(n^{-1}),
+    \qquad
+    \mu_n^\star\asymp n.
+  \]
+\end{enumerate}
+\end{proposition}
+
+
+
+
+\begin{proof}
+
+First note from \Cref{lem:weight_operator_form} that the weights from the dual solution in \Cref{prop:gm_dual} have the following representation in terms of the empirical covariance operator $D_{\nu,n}$:
+
+\[
+  \widehat\omega(\eta_n)=W^{-1}S_n(D_{\nu,n}+\eta_n I)^{-1}K_{x_0}.
+\]
+
+The RKHS alignment error from the GM primal program~\eqref{eq:gm_primal} for such weights is 
+
+\begin{align*}
+   \norm{K_{x_0} - \frac{1}{n} \sum_{i=1}^n \widehat\omega_i K_{X_i}}_{\F} &= \norm{K_{x_0} - S_n^*W^{-1}S_n(D_{\nu,n} + \eta_n I)^{-1}K_{x_0}}_{\F}\\
+   &=\norm{(I - D_{\nu,n}(D_{\nu,n} + \eta_n I)^{-1})K_{x_0}}_{\F}\\
+   &= \norm{\eta_n(D_{\nu,n}+\eta_n I)^{-1}K_{x_0}}_{\F} \\
+   &=R_n(\eta_n)=:\gamma_n
+\end{align*}
+
+This implies that it suffices to prove that $R_n(\eta)$ is strictly increasing since the weights $\widehat\omega(\eta_n/2)$ result in an alignment error less than $\gamma_n$ and thus Slater's condition applies. 
+
+$D_{\nu,n}$ is a compact, self-adjoint, and positive semidefinite operator. By the spectral theorem, it can be decomposed as the sum
+
+\[D_{\nu,n}=\sum_{j=1}^{r_n}\widehat{\mu}_{j,n}\,\widehat e_{j,n}\otimes\widehat e_{j,n}.\]
+
+where $\widehat{\mu}_{j,n}>0$ and $\widehat e_{j,n}$ are the non-zero eigenvalues and corresponding orthonormal eigenvectors of $D_{\nu,n}$. 
+We can first decompose $R^2_n(\eta)$ as the sum of two parts, the projection onto $\ran(D_{\nu,n})$ and its projection onto $\ker(D_{\nu,n})$:
+
+\[K_{x_0} =
+\sum_{j=1}^{r_n}
+\left\langle K_{x_0},\widehat e_{j,n}\right\rangle_{\F}
+\widehat e_{j,n}
++
+P_{\ker(D_{\nu,n})}K_{x_0}\]
+
+Left-multiplying by $\eta(D_{\nu,n} + \eta I)^{-1}$ gives
+
+\begin{align*}
+\eta(D_{\nu,n}+\eta I)^{-1}K_{x_0}
+&=
+\sum_{j=1}^{r_n}
+\frac{\eta}{\widehat\mu_{j,n}+\eta}
+\left\langle K_{x_0},\widehat e_{j,n}\right\rangle_{\F}
+\widehat e_{j,n}
++
+P_{\ker(D_{\nu,n})}K_{x_0},
+\\\implies
+\left\|
+\eta(D_{\nu,n}+\eta I)^{-1}K_{x_0}
+\right\|_{\F}^{2}
+&=
+\sum_{j=1}^{r_n}
+\left(
+\frac{\eta}{\widehat\mu_{j,n}+\eta}
+\right)^2
+\left|
+\left\langle K_{x_0},\widehat e_{j,n}\right\rangle_{\F}
+\right|^2
++
+\left\|
+P_{\ker(D_{\nu,n})}K_{x_0}
+\right\|_{\F}^{2}.
+\end{align*}
+
+
+For any constant $c>0$, the function $x\mapsto x/(x+c)$ is strictly increasing. This implies that the map $\eta\mapsto R_n^2(\eta)$ is strictly increasing when $k_0\neq0$. 
+
+Hence $\widehat\omega(\eta_n/2)$ is strictly feasible for the tolerance $R_n(\eta_n)$, proving Slater.
+
+For the second part, using notation from \Cref{prop:gm_dual}, note first that $R_n^2(\eta_n)$ has this alternate representation:
+
+\begin{align*}
+R_n^2(\eta_n)
+&:=\left\|\eta_n(D_{\nu,n}+\eta_n I)^{-1}K_{x_0}\right\|_{\F}^2\\
+&=k_{00}-\sum_{j=1}^na_j^2
+\frac{\lambda_j+2n\eta_n}
+{(\lambda_j+n\eta_n)^2}
+\end{align*}
+
+
+From \Cref{prop:gm_dual}, using \eqref{eq:dual_first_derivative}, we get
+
+\begin{align*}
+f'\!\left(\frac{1}{\eta_n}\right)
+&=
+k_{00}-\gamma_n^2
+-\sum_{j=1}^na_j^2\frac{\frac{1}{\eta_n}\left(2n+\frac{\lambda_j}{\eta_n}\right)
+}{
+\left(n+\frac{\lambda_j}{\eta_n}\right)^2}
+\\
+&=
+k_{00}-\gamma_n^2-\sum_{j=1}^na_j^2\frac{\lambda_j+2n\eta_n}
+{(\lambda_j+n\eta_n)^2}\\
+&=\left[k_{00}-\sum_{j=1}^na_j^2\frac{\lambda_j+2n\eta_n}{(\lambda_j+n\eta_n)^2}\right]-\gamma_n^2
+\\
+&=R_n^2(\eta_n)-\gamma_n^2 = 0.
+\end{align*}
+
+
+
+By \Cref{assump:nondegeneracy}, $k_0\neq0$, so \eqref{eq:dual_second_derivative} is strictly negative for all $\mu\ge0$ and the dual objective is strictly concave. Strict concavity implies that there is at most one stationary point. Hence our optimal solution must be  $\mu_n^\star=1/\eta_n$.
+
+Finally, we obtain the rate for our choice of $\gamma_n$. We distinguish the infinite dimensional and finite dimensional cases. 
+
+\noindent\textbf{Infinite-rank case.}
+
+Define
+\[
+  E_n:=(D_\nu+\eta_nI)^{-1/2}(D_{\nu,n}-D_\nu)(D_\nu+\eta_nI)^{-1/2}.
+\]
+
+
+By \Cref{lem:precision_concentration}, we have the event $\{\norm{E_n}_{\op}\leq c<1\}$ which has probability tending to $1$ as $n\to\infty$. For the remainder of this case, we work on this good event.
+
+First, we have the following expression for $D_{\nu,n} + \eta_n I$:
+\[
+D_{\nu,n}+\eta_nI
+=(D_\nu+\eta_nI)^{1/2}(I+E_n)(D_\nu+\eta_nI)^{1/2}.
+\]
+Using the good event, we have
+\begin{align*}
+    \|E_n\|_{\op} \leq c < 1
+    &\implies
+    -cI \preceqL E_n \preceqL cI
+    \\
+    &\implies
+    (1-c)I \preceqL I+E_n
+    \\
+    &\implies
+    (1-c)(D_\nu+\eta_n I)
+    \preceqL
+    D_{\nu,n}+\eta_n I.
+\end{align*}
+Since both operators are strictly positive for $\eta_n>0$, inversion reverses the Loewner order. Hence
+\[
+    (D_{\nu,n}+\eta_n I)^{-1}
+    \preceqL
+    \frac{1}{1-c}(D_\nu+\eta_n I)^{-1}.
+\]
+
+\medskip
+Since $D_{\nu,n}\succeq0$,
+\[
+  (D_{\nu,n}+\eta_n I)^{-2}
+  \preceqL
+  \eta_n^{-1}(D_{\nu,n}+\eta_n I)^{-1}.
+\]
+Therefore
+\begin{align*}
+  \gamma_n^2
+  &= \norm{\eta_n (D_{\nu,n} + \eta_n I)^{-1} K_{x_0}}_{\F}^2\\
+  &=\eta_n^2\inner{K_{x_0}}{(D_{\nu,n}+\eta_n I)^{-2} K_{x_0}}_{\F}\\
+  &\le\eta_n\inner{K_{x_0}}{(D_{\nu,n}+\eta_nI)^{-1}K_{x_0}}_{\F}\\
+  &\le\frac{\eta_n}{1-c}\Ncal_{D,x_0}(\eta_n)
+  =O(\eta_n^{1-a}).
+\end{align*}
+Here \Cref{lem:weighted_scale} gives $\Ncal_{D,x_0}(\eta_n)\asymp\eta_n^{-a}$. Since the good event has probability tending to one and $\eta_n\asymp (\log n)^2/n$, this gives
+\[
+  \gamma_n=O_p\!\left(n^{-(1-a)/2}(\log n)^{1-a}\right).
+\]
+
+\medskip
+\noindent\textbf{Finite-rank case.}
+Suppose $r_\nu<\infty$. Boundedness of the kernel and consistency of the first-fold precisions imply $\norm{D_{\nu,n}-D_\nu}_{\op}=o_p(1)$.
+
+Therefore, with probability tending to one, we have
+\[
+  D_{\nu,n}\succeqL\frac{\rho_{\min}^+}{2}I.
+\]
+On this event $\{ D_{\nu,n}\succeqL\frac{\rho_{\min}^+}{2}I\}$,
+\begin{align*}
+  \gamma_n
+  &=
+  \eta_n\norm{(D_{\nu,n}+\eta_n I)^{-1}K_{x_0}}_{\F}\\
+  &\le
+  \frac{2\eta_n}{\rho_{\min}^+}\norm{K_{x_0}}_{\F}
+  =O(\eta_n).
+\end{align*}
+Thus, when $\eta_n\asymp n^{-1}$,
+\[
+  \gamma_n=O_p(n^{-1}).
+\]
+
+In both cases, $\mu_n^\star=\eta_n^{-1}$ and therefore $\mu_n^\star\asymp n/(\log n)^2$ when $\eta_n\asymp (\log n)^2/n$, and $\mu_n^\star\asymp n$ when $\eta_n\asymp n^{-1}$.
+
+\end{proof}
+
+
+
+\begin{proposition}[Ratio consistency of the variance]\label{prop:variance_consistency}
+\pdfbookmark[2]{Proposition \theproposition}{proposition.bookmark.\theproposition}
+Suppose Assumptions~\ref{assump:model}--\ref{assump:local_leverage} hold. Let $\eta_n\asymp (\log n)^2/n$ if $r_\nu=\infty$ and $\eta_n\asymp n^{-1}$ if $r_\nu<\infty$, and let $\widehat\omega$ be the weights from \Cref{prop:regularized_gamma}. Define
+\begin{align}
+  \widehat V_n&:=\frac1n\widehat\omega^\top W\widehat\omega,
+  \label{eq:Vhat_def}\\
+  V_n&:=\inner{(D_\nu+\eta_nI)^{-1}K_{x_0}}
+  {D_\nu(D_\nu+\eta_nI)^{-1}K_{x_0}}_{\F}.
+  \label{eq:V_def}
+\end{align}
+Then
+\begin{equation}
+  \frac{\widehat V_n}{V_n}\overset p\longrightarrow1.
+  \label{eq:variance_consistency}
+\end{equation}
+Moreover, the variance scale depends on the spectral regime:
+\begin{enumerate}[label=(\roman*),leftmargin=2.2em]
+  \item If $r_\nu=\infty$, then
+  \begin{equation}
+    V_n\asymp\Ncal_{D,x_0}(\eta_n)\asymp\Ncal_{x_0}(\eta_n)\asymp\eta_n^{-a}\asymp \frac{n^a}{(\log n)^{2a}}.
+    \label{eq:V_scale}
+  \end{equation}
+
+  \item If $r_\nu<\infty$, then
+  \begin{equation}
+    V_n
+    \longrightarrow
+    V_0
+    :=
+    \inner{K_{x_0}}{D_\nu^\dagger K_{x_0}}_{\F}
+    \in(0,\infty),
+    \label{eq:V_scale_finite}
+  \end{equation}
+  and
+  \[
+    \Ncal_{D,x_0}(\eta_n)\longrightarrow V_0.
+  \]
+\end{enumerate}
+\end{proposition}
+
+
+\begin{proof}
+
+As in \Cref{lem:precision_concentration}, set
+\begin{equation}
+  E_n:=(D_\nu+\eta_n I)^{-1/2}(D_{\nu,n}-D_\nu)(D_\nu+\eta_n I)^{-1/2}.
+  \label{eq:variance_consistency_E_n}
+\end{equation}
+\Cref{lem:precision_concentration} provides the event
+$\{\norm{E_n}_{\op}\leq c<1\}$, which has probability tending to one as $n\to\infty$.
+For the remainder of this proof, we work on this good event.
+
+First, we reexpress $\widehat V_n$ in terms of the empirical precision-weighted covariance operator $D_{\nu,n}$. \Cref{lem:weight_operator_form} yields
+\[
+ \widehat\omega=W^{-1}S_n(D_{\nu,n}+\eta_n I)^{-1}K_{x_0}.
+\]
+From \Cref{defn:sampling_operator}, we get
+\begin{align*}
+ \widehat V_n
+ &=\frac1n\widehat\omega^\top W\widehat\omega\\
+ &=\inner{(D_{\nu,n}+\eta_n I)^{-1}K_{x_0}}
+ {D_{\nu,n}(D_{\nu,n}+\eta_n I)^{-1}K_{x_0}}_{\F}.
+\end{align*}
+
+Set
+\[
+  h_n:=(D_\nu+\eta_n I)^{-1/2}K_{x_0},\qquad
+  B_n:=(D_\nu+\eta_n I)^{-1/2}D_\nu(D_\nu+\eta_n I)^{-1/2},
+\]
+and write
+\[
+  R_n:=(I+E_n)^{-1}.
+\]
+Rearranging \eqref{eq:variance_consistency_E_n} gives
+\begin{align*}
+  D_{\nu,n}+\eta_n I
+  &=(D_\nu+\eta_n I)^{1/2}(I+E_n)(D_\nu+\eta_n I)^{1/2},\\
+  D_{\nu,n}
+  &=(D_\nu+\eta_n I)^{1/2}(B_n+E_n)(D_\nu+\eta_n I)^{1/2}.
+\end{align*}
+Therefore,
+\[
+  \widehat V_n
+  =\inner{h_n}{R_n(B_n+E_n)R_nh_n}_{\F}.
+\]
+In contrast, the population variance has the form
+\[
+  V_n=\inner{h_n}{B_nh_n}_{\F},\qquad
+  \norm{h_n}_{\F}^2=\Ncal_{D,x_0}(\eta_n).
+\]
+
+On the good event,
+\[
+  \norm{R_n}_{\op}\leq\frac{1}{1-c},
+  \qquad
+  R_n-I=-R_nE_n,
+  \qquad
+  \norm{R_n-I}_{\op}\leq\frac{\norm{E_n}_{\op}}{1-c}.
+\]
+Moreover,
+\[
+  0\preceqL B_n=I-\eta_n(D_\nu+\eta_n I)^{-1}\preceqL I,
+  \qquad \norm{B_n}_{\op}\leq1.
+\]
+Using
+\[
+  R_n(B_n+E_n)R_n-B_n
+  =(R_n-I)B_nR_n+B_n(R_n-I)+R_nE_nR_n,
+\]
+we obtain
+\begin{align*}
+  \norm{R_n(B_n+E_n)R_n-B_n}_{\op}
+  &\leq \norm{R_n-I}_{\op}\norm{R_n}_{\op}
+  +\norm{R_n-I}_{\op}
+  +\norm{R_n}_{\op}^2\norm{E_n}_{\op}\\
+  &\leq C_c\norm{E_n}_{\op},
+\end{align*}
+where $C_c>0$ depends only on $c$. Hence,
+\begin{align*}
+  \abs{\widehat V_n-V_n}
+  &\leq C_c\Ncal_{D,x_0}(\eta_n)\norm{E_n}_{\op},\\
+  \abs{\frac{\widehat V_n}{V_n}-1}
+  &\leq C_c\frac{\Ncal_{D,x_0}(\eta_n)}{V_n}\norm{E_n}_{\op}.
+\end{align*}
+It therefore suffices to prove $\frac{\Ncal_{D,x_0}(\eta_n)}{V_n}=O(1)$. We distinguish the two spectral regimes.
+
+\medskip
+\noindent\textbf{Infinite-rank case.}
+\Cref{lem:weighted_scale} gives
+\[
+ V_n\asymp\Ncal_{D,x_0}(\eta_n)\asymp\Ncal_{x_0}(\eta_n)\asymp\eta_n^{-a}.
+\]
+In particular, $\Ncal_{D,x_0}(\eta_n)/V_n=O(1)$. This step uses the local leverage assumption for $C_\nu$ and comparison with $D_\nu$; no separate regular variation assumption on $D_\nu$ is needed.
+
+\medskip
+\noindent\textbf{Finite-rank case.}
+Let $b_j:=\inner{K_{x_0}}{\psi_j}_{\F}$. If $r_\nu<\infty$, we immediately observe that as $\eta_n \to 0$
+\begin{align*}
+V_n
+&=
+\sum_{j=1}^{r_\nu}
+\frac{\rho_j b_j^2}{(\rho_j+\eta_n)^2}
+\longrightarrow
+\sum_{j=1}^{r_\nu}\frac{b_j^2}{\rho_j},\\
+\Ncal_{D,x_0}(\eta_n)
+&=
+\sum_{j=1}^{r_\nu}\frac{b_j^2}{\rho_j+\eta_n}
+\longrightarrow
+\sum_{j=1}^{r_\nu}\frac{b_j^2}{\rho_j}.
+\end{align*}
+The common limit equals
+\[
+  \inner{K_{x_0}}{D_\nu^\dagger K_{x_0}}_{\F}
+  =V_0\in(0,\infty).
+\]
+Hence $\Ncal_{D,x_0}(\eta_n)/V_n\to1$.
+
+In either case, $\Ncal_{D,x_0}(\eta_n)/V_n=O(1)$. Using $\norm{E_n}_{\op}=o_p(1)$, the ratio of the empirical variance to the population variance thus converges to 1.
+
+\end{proof}
+
+\begin{proposition}[Vanishing max-to-sum ratio]\label{prop:max_sum}
+\pdfbookmark[2]{Proposition \theproposition}{proposition.bookmark.\theproposition}
+Suppose Assumptions~\ref{assump:model}--\ref{assump:local_leverage} hold. Let $\eta_n\asymp (\log n)^2/n$ if $r_\nu=\infty$ and $\eta_n\asymp n^{-1}$ if $r_\nu<\infty$, and let $\widehat\omega$ be the weights from \Cref{prop:regularized_gamma}. Then
+\begin{equation}
+  \frac{\max_{1\le i\le n}\widehat\omega_i^2}
+  {\sum_{i=1}^n\widehat\omega_i^2}
+  \overset p\longrightarrow0.
+  \label{eq:max_sum}
+\end{equation}
+More precisely, in the infinite-rank case the ratio is
+\[
+  O_p\!\left((\log n)^{-2}\right),
+\]
+while in the finite-rank case it is
+\[
+  O_p(n^{-1}).
+\]
+\end{proposition}
+
+
+\begin{proof}
+
+As in \Cref{lem:precision_concentration}, set
+\[
+  E_n:=(D_\nu+\eta_n I)^{-1/2}(D_{\nu,n}-D_\nu)(D_\nu+\eta_n I)^{-1/2}.
+\]
+
+As in \Cref{prop:regularized_gamma,prop:variance_consistency}, \Cref{lem:precision_concentration} provides us with the event $\{\norm{E_n}_{\op}\leq c<1\}$ which has probability tending to $1$ as $n\to\infty$. For the remainder of this proof, we work on this good event. 
+
+By \Cref{lem:weight_operator_form},
+\[
+ \widehat\omega_i=\widehat t_{E_i}
+ \inner{K_{X_i}}{(D_{\nu,n}+\eta_nI)^{-1}K_{x_0}}_{\F}.
+\]
+Applying Cauchy--Schwarz in the regularized inner product gives
+\begin{align*}
+ \widehat\omega_i^2
+ &\leq\widehat t_{E_i}^2
+ \norm{(D_{\nu,n}+\eta_n I)^{-1/2}K_{X_i}}_{\F}^2
+ \norm{(D_{\nu,n}+\eta_n I)^{-1/2}K_{x_0}}_{\F}^2\\
+ &=\widehat t_{E_i}^2\widehat\Ncal_{D,X_i}(\eta_n)
+       \widehat\Ncal_{D,x_0}(\eta_n).
+\end{align*}
+On the good event, using Loewner order as in \Cref{prop:regularized_gamma},
+\[
+ D_{\nu,n}+\eta_nI\succeq(1-c)(D_\nu+\eta_n I).
+\]
+Moreover, \Cref{prop:noise_variances} implies that the two estimated precisions are bounded above and away from zero with probability tending to one. We now distinguish the two spectral regimes.
+
+\medskip
+\noindent\textbf{Infinite-rank case.}
+The bounded-kernel leverage bound gives
+\[
+ \widehat\Ncal_{D,X_i}(\eta_n)\leq\kappa^2/\eta_n,
+ \qquad
+ \widehat\Ncal_{D,x_0}(\eta_n)
+ \leq\frac1{1-c}\Ncal_{D,x_0}(\eta_n)=O(\eta_n^{-a}),
+\]
+where the last step is \Cref{lem:weighted_scale}. Therefore,
+\[
+ \max_i\widehat\omega_i^2=O_p(\eta_n^{-a-1}).
+\]
+On the other hand, since the estimated variances are bounded above and away from zero,
+\[
+ \sum_i\widehat\omega_i^2\asymp_p n\widehat V_n,
+ \qquad \widehat V_n/V_n\to_p1,\qquad V_n\asymp\eta_n^{-a}.
+\]
+Consequently,
+\[
+ \frac{\max_i\widehat\omega_i^2}{\sum_i\widehat\omega_i^2}
+ =O_p\!\left(\frac1{n\eta_n}\right)
+ =O_p((\log n)^{-2})=o_p(1).
+\]
+Here $A_n\asymp_p B_n$ means that $A_n/B_n$ and $B_n/A_n$ are both bounded in probability.
+
+\medskip
+\noindent\textbf{Finite-rank case.}
+Since $D_\nu\succeq(\min_gt_g)C_\nu$, its positive spectral gap is at least $(\min_gt_g)\mu_{\min}^+$. Thus $\Ncal_{D,X_i}(\eta_n)$ and $\Ncal_{D,x_0}(\eta_n)$ are bounded uniformly in $i$, and the same is true for their empirical versions on the good event. Hence $\max_i\widehat\omega_i^2=O_p(1)$. \Cref{prop:variance_consistency} gives $\widehat V_n\to_p V_0>0$, so $\sum_i\widehat\omega_i^2\asymp_p n$. Therefore the ratio is $O_p(n^{-1})=o_p(1)$.
+\end{proof}
+
+
+
+\newpage
+
+% ============================================================
+\begin{proposition}[Root-$m$ rate for the nuisance estimates]\label{prop:nuisance_rates}
+\pdfbookmark[2]{Proposition \theproposition}{proposition.bookmark.\theproposition}
+Suppose \Cref{assump:model} holds and $\tau_m=O(m^{-1/2})$. Then
+\[
+ \norm{\widehat c-c}+\max_g\{\norm{\widehat P_g-P_g}_{\op}
+ +\norm{\widehat\mu_g-\mu_g}\}=O_p(m^{-1/2}).
+\]
+In particular, if $a_g=P_gc$, $b_g=-c^\top P_g\mu_g$, $\widehat a_g=\widehat P_g\widehat c$, and $\widehat b_g=-\widehat c^\top\widehat P_g\widehat\mu_g$, then
+\[
+ \max_g\{\norm{\widehat a_g-a_g}+|\widehat b_g-b_g|\}=O_p(m^{-1/2}).
+\]
+\end{proposition}
+\begin{proof}
+Gaussian fourth moments and fixed dimension give root-$m$ rates for the sample means and covariance matrices. Matrix inversion is continuously differentiable in a neighborhood of each positive definite $\Omega_g$, giving the precision rates. The first-fold mixture proportions have the same rate when they are estimated.
+
+Collect these distribution parameters in a finite-dimensional vector $\alpha$. In a compact neighborhood of the truth, covariance eigenvalues stay bounded above and away from zero, and the mixture probabilities stay away from zero. The posterior environment probability is a logistic function of a quadratic polynomial in $x$. Its first derivatives therefore have polynomial envelopes in $\norm x$. The same is true of the derivatives of $V_\alpha(x,g)$. Consequently, the derivatives of $V_\alpha V_\alpha^\top$ and $V_\alpha Y$ have integrable envelopes, and the quantities at the true parameter have finite second moments. Here $f_0$ is bounded by $\kappa\norm{f_0}_{\F}$, and the Gaussian and sub-exponential variables have all polynomial moments.
+
+The mean value theorem and empirical averages of these envelopes give
+\begin{align*}
+ \widehat M-M
+ &=\frac1m\sum_{i\in I_1}(V_iV_i^\top-M)+O_p(\norm{\widehat\alpha-\alpha})
+ =O_p(m^{-1/2}),\\
+ \widehat h-\E[VY]
+ &=\frac1m\sum_{i\in I_1}\{V_iY_i-\E[VY]\}
+ +O_p(\norm{\widehat\alpha-\alpha})=O_p(m^{-1/2}).
+\end{align*}
+For fixed strata, center each summand at its within-environment expectation before summing; the weighted expectations give $M$ and $\E[VY]$. The same rate follows by a second-moment bound. No independence between $\widehat\alpha$ and these empirical moments is needed.
+
+Since $M\succ0$, $(\widehat M+\tau_m I_d)^{-1}=O_p(1)$, and
+\[
+ \widehat c-c=(\widehat M+\tau_m I_d)^{-1}
+ \{\widehat h-\E[VY]-(\widehat M-M)c-\tau_m c\}=O_p(m^{-1/2}).
+\]
+The rates for $a_g$ and $b_g$ follow by finite-dimensional multiplication.
+\end{proof}
+
+\begin{proposition}[Consistency of the environment variance estimates]\label{prop:noise_variances}
+\pdfbookmark[2]{Proposition \theproposition}{proposition.bookmark.\theproposition}
+Suppose \Cref{assump:model,assump:krr} hold and use the first-fold KRR and nuisance estimates described above. Then, for $g\in\{e,f\}$,
+\[
+ \widehat\sigma_{U,g}^2\to_p\sigma_{U,g}^2,\qquad \widehat t_g\to_p t_g.
+\]
+\end{proposition}
+\begin{proof}
+Write the first-fold corrected residual as $U_i+d_i$, where
+\[
+ d_i=f_0(X_i)-\widehat f_{\lambda_m}^{(1)}(X_i)
+ +m_{E_i}(X_i)-\widehat m_{E_i}(X_i).
+\]
+By \Cref{thm:krr_rate}, boundedness of $K$, \Cref{prop:nuisance_rates}, and the empirical Gaussian second moments,
+\[
+ \frac1{m_g}\sum_{i\in I_1:E_i=g}d_i^2=o_p(1).
+\]
+The law of large numbers gives $m_g^{-1}\sum_{i\in I_1:E_i=g}U_i^2\to_p\sigma_{U,g}^2$. Cauchy--Schwarz makes the empirical cross term $o_p(1)$. Expanding $(U_i+d_i)^2$ proves variance consistency. Since $\sigma_{U,g}^2>0$, the lower truncation in \eqref{eq:sigma_hat} has no asymptotic effect, and inversion gives consistency of the precisions. This proof allows the same first-fold observations in all the fitted quantities.
+\end{proof}
+
+\newpage
+\section{Additional Proofs}\label{sec:additional_proofs}
+
+\begin{lemma}[Identification of the RKHS with the first power space]\label{lem:first_power_isometry}
+\pdfbookmark[2]{Lemma \thelemma}{lemma.bookmark.\thelemma}
+Under \Cref{assump:model}, the canonical map
+\[
+  I_\nu:\F\to[\F]^1_\nu,\qquad f\mapsto[f]_\nu,
+\]
+is an isometric isomorphism. In particular,
+\[
+  \norm{[f]_\nu}_{[\F]^1_\nu}=\norm{f}_{\F},\qquad f\in\F.
+\]
+\end{lemma}
+
+\begin{proof}
+By \Cref{assump:model}, $\nu$ has full support on $\X$ and $K$ is continuous. 
+
+If there existed $0\neq f\in\ker I_\nu$, then $f=0$ $\nu$-a.e., but continuity of the kernel will give an open set $U\subset\X$ on which $|f|>0$. Full support then implies $\nu(U)>0$, a contradiction.
+
+Hence $I_\nu$ is injective, so by the definition of the identifiable subspace,
+\[
+  \F=\F_\nu=(\ker I_\nu)^\perp=\overline{\ran(C_\nu)}.
+\]
+Therefore $(\mu_j^{1/2}e_j)_{j\in\mathcal J_\nu}$ is an orthonormal basis of $\F$. Every $f\in\F$ has a unique expansion
+\[
+  f=\sum_{j\in\mathcal J_\nu}b_j\mu_j^{1/2}e_j,
+  \qquad
+  (b_j)_{j\in\mathcal J_\nu}\in\ell_2(\mathcal J_\nu),
+\]
+where the sum is finite if $r_\nu<\infty$ and infinite if $r_\nu=\infty$. Moreover,
+\[
+  \norm{f}_{\F}^2=\sum_{j\in\mathcal J_\nu}b_j^2.
+\]
+Applying $I_\nu$ gives
+\[
+  [f]_\nu
+  =
+  \sum_{j\in\mathcal J_\nu}b_j\mu_j^{1/2}[e_j]_\nu,
+\]
+so the definition of the first power norm yields
+\[
+  \norm{[f]_\nu}_{[\F]^1_\nu}^2
+  =
+  \sum_{j\in\mathcal J_\nu}b_j^2
+  =
+  \norm{f}_{\F}^2.
+\]
+Conversely, every element of $[\F]^1_\nu$ has such an expansion, so $I_\nu:\F\to[\F]^1_\nu$ is onto and isometric.
+\end{proof}
+
+\phantomsection
+\label{proof:gm_dual}
+\pdfbookmark[2]{Proof of Proposition 4.1}{proof.bookmark.gm_dual}
+\begin{proof}[Proof of \Cref{prop:gm_dual}]
+We prove the two statements in order. We first derive the dual problem and the formula for the primal weights using the dual solution $\mu^\star$
+
+\medskip
+
+
+Expanding the RKHS alignment constraint using
+\eqref{eq:alignment_gram_form} gives
+\[
+  \left\|
+  K_{x_0}
+  -\frac1n\sum_{i=1}^n\omega_iK_{X_i}
+  \right\|_{\F}^2
+  =
+  \frac1{n^2}\omega^\top K\omega
+  -\frac2n k_0^\top\omega
+  +k_{00}.
+\]
+Hence the primal program \eqref{eq:gm_primal} can be written as
+\[
+  \min_{\omega\in\R^n}\frac1n\omega^\top W\omega
+  \quad\text{subject to}\quad
+  \frac1{n^2}\omega^\top K\omega
+  -\frac2n k_0^\top\omega
+  +k_{00}-\gamma^2
+  \leq 0.
+\]
+
+\noindent
+For a Lagrange multiplier $\mu\geq0$, the Lagrangian is
+\[
+  L(\omega,\mu)
+  =
+  \frac1n\omega^\top W\omega
+  +
+  \mu\left(
+  \frac1{n^2}\omega^\top K\omega
+  -\frac2n k_0^\top\omega
+  +k_{00}-\gamma^2
+  \right).
+\]
+For each fixed $\mu\geq0$, the map
+$\omega\mapsto L(\omega,\mu)$ is strictly convex because
+\[
+  \frac1n W+\frac{\mu}{n^2}K
+  \succ 0,
+\]
+since $K\succeq0$ and $n^{-1}W\succ0$. Therefore, the minimizer of
+the Lagrangian with respect to $\omega$ is uniquely characterized by
+the first-order condition.
+
+\noindent Differentiating with respect to $\omega$ gives
+\[
+  \nabla_\omega L(\omega,\mu)
+  =
+  \frac2nW\omega
+  +
+  \frac{2\mu}{n^2}K\omega
+  -
+  \frac{2\mu}{n}k_0.
+\]
+Setting this equal to zero yields
+\[
+  \left(
+  \frac1nW+\frac\mu{n^2}K
+  \right)\omega
+  =
+  \frac\mu n k_0.
+\]
+
+\noindent which equals \eqref{eq:dual_weight_recovery}.
+
+\noindent Since
+\[
+  \frac1nW+\frac\mu{n^2}K
+\]
+is positive definite and therefore invertible, the unique minimizer is
+\begin{equation}
+\label{eq:weight_formula}
+  \omega^\star(\mu)
+  =
+  \frac\mu n
+  \left(
+  \frac1nW+\frac\mu{n^2}K
+  \right)^{-1}
+  k_0.
+\end{equation}
+
+\indent To obtain the dual objective function, first note that
+the Lagrangian depending on $\omega$ can be written as
+\[
+  \omega^\top \left(\frac1nW+\frac\mu{n^2}K \right)\omega
+  -
+  \frac{2\mu}{n}k_0^\top\omega + \mu(k_{00}-\gamma^2).
+\]
+Using
+\[
+  \left(\frac1nW+\frac\mu{n^2}K \right)\omega^\star(\mu)
+  =
+  \frac\mu n k_0,
+\]
+we obtain
+\[
+  \omega^\star(\mu)^\top
+  \left(\frac1nW+\frac\mu{n^2}K \right)
+  \omega^\star(\mu)
+  =
+  \frac\mu n
+  k_0^\top\omega^\star(\mu).
+\]
+Therefore, substituting in \eqref{eq:weight_formula}, we obtain 
+\begin{align*}
+  \inf_{\omega\in\R^n}L(\omega,\mu)
+  &=
+  \mu(k_{00}-\gamma^2)
+  -
+  \frac\mu n
+  k_0^\top\omega^\star(\mu)
+  \\
+  &=
+  \mu(k_{00}-\gamma^2)
+  -
+  \frac{\mu^2}{n^2}
+  k_0^\top
+  \left(
+  \frac1nW+\frac\mu{n^2}K
+  \right)^{-1}
+  k_0.
+\end{align*}
+Hence the dual problem is
+\[
+  \max_{\mu\geq0}
+  \left\{
+  \mu(k_{00}-\gamma^2)
+  -
+  \frac{\mu^2}{n^2}
+  k_0^\top
+  \left(
+  \frac1nW+\frac\mu{n^2}K
+  \right)^{-1}
+  k_0
+  \right\},
+\]
+which is exactly \eqref{eq:gm_dual}.
+
+By Slater's condition, strong duality holds because the primal problem
+is convex and admits a strictly feasible point. Therefore, if
+$\mu^\star$ denotes an optimal dual multiplier, the corresponding
+primal optimizer is obtained by substituting $\mu^\star$ into
+\eqref{eq:weight_formula}, giving
+\[
+  \widehat\omega
+  =
+  \frac{\mu^\star}{n}
+  \left(
+  \frac1nW+\frac{\mu^\star}{n^2}K
+  \right)^{-1}
+  k_0,
+\]
+which proves \eqref{eq:dual_weight_recovery}.
+
+\medskip
+\noindent
+Secondly, we obtain an eigenbasis representation of our dual objective function and its derivatives.
+
+Let
+\[
+ \widetilde K:=W^{-1/2}KW^{-1/2}=U\Lambda U^\top,
+ \qquad a:=U^\top W^{-1/2}k_0.
+\]
+Then
+\[
+ \frac1nW+\frac\mu{n^2}K
+ =W^{1/2}U\left(\frac1nI+\frac\mu{n^2}\Lambda\right)U^\top W^{1/2}.
+\]
+Consequently,
+\[
+ \frac{\mu^2}{n^2}k_0^\top
+ \left(\frac1nW+\frac\mu{n^2}K\right)^{-1}k_0
+ =\frac{\mu^2}{n^2}a^\top
+ \left(\frac1nI+\frac\mu{n^2}\Lambda\right)^{-1}a
+ =\sum_{j=1}^n\frac{a_j^2\mu^2}{n+\lambda_j\mu}.
+\]
+Thus the dual objective becomes
+\[
+  f(\mu)
+  =
+  (k_{00}-\gamma^2)\mu
+  -
+  \sum_{j=1}^n
+  \frac{a_j^2\mu^2}{n+\lambda_j\mu},
+\]
+which is \eqref{eq:dual_eigenbasis}.
+
+For each $j$,
+\[
+  \frac{d}{d\mu}
+  \left(
+  \frac{\mu^2}{n+\lambda_j\mu}
+  \right)
+  =
+  \frac{
+  2\mu(n+\lambda_j\mu)
+  -
+  \lambda_j\mu^2
+  }{
+  (n+\lambda_j\mu)^2
+  }
+  =
+  \frac{
+  \mu(2n+\lambda_j\mu)
+  }{
+  (n+\lambda_j\mu)^2
+  }.
+\]
+Therefore,
+\[
+  f'(\mu)
+  =
+  k_{00}-\gamma^2
+  -
+  \sum_{j=1}^n
+  a_j^2
+  \frac{
+  \mu(2n+\lambda_j\mu)
+  }{
+  (n+\lambda_j\mu)^2
+  },
+\]
+which proves \eqref{eq:dual_first_derivative}.
+
+Differentiating once more gives
+\[
+  \frac{d}{d\mu}
+  \left[
+  \frac{
+  \mu(2n+\lambda_j\mu)
+  }{
+  (n+\lambda_j\mu)^2
+  }
+  \right]
+  =
+  \frac{2n^2}{(n+\lambda_j\mu)^3}.
+\]
+Hence
+\[
+  f''(\mu)
+  =
+  -
+  \sum_{j=1}^n
+  a_j^2
+  \frac{2n^2}{(n+\lambda_j\mu)^3}
+  \leq 0,
+\]
+which proves \eqref{eq:dual_second_derivative}. 
+\end{proof}
+
+
+\begin{lemma}[Regularized empirical-covariance concentration]\label{lem:operator_bernstein}
+\pdfbookmark[2]{Lemma \thelemma}{lemma.bookmark.\thelemma}
+Suppose Assumptions~\ref{assump:model} and \ref{assump:krr} hold. Define
+\[
+  L_\eta
+  :=
+  \begin{cases}
+    \kappa^2/\eta, & r_\nu=\infty,\\[1mm]
+    A_{\mathrm u}^{\mathrm{fin}}, & r_\nu<\infty,
+  \end{cases}
+\]
+and
+\[
+  M_\eta
+  :=
+  \begin{cases}
+    D\eta^{-p}, & r_\nu=\infty,\\[1mm]
+    r_\nu, & r_\nu<\infty.
+  \end{cases}
+\]
+Set
+\[
+  G_\eta
+  :=\log\!\left(
+    2eM_\eta\frac{\norm{C_\nu}_{\op}+\eta}{\norm{C_\nu}_{\op}}
+  \right).
+\]
+For i.i.d. mixture observations, for every $\tau\ge1$, with probability at least $1-2e^{-\tau}$,
+\begin{align}
+  &\norm{(C_\nu+\eta I)^{-1/2}(C_\nu-C_{\nu,n})(C_\nu+\eta I)^{-1/2}}_{\op}
+  \nonumber\\
+  &\qquad\le
+  \frac{4L_\eta\tau G_\eta}{3n}
+  +\sqrt{
+    \frac{2L_\eta\tau G_\eta}{n}
+    \frac{\norm{C_\nu}_{\op}}{\norm{C_\nu}_{\op}+\eta}
+  }.
+  \label{eq:operator_bernstein}
+\end{align}
+For fixed strata, the same probability orders below follow by applying the inequality to each stratum and summing; only constants change. In particular:
+\begin{enumerate}[label=(\roman*),leftmargin=2.2em]
+  \item if $r_\nu=\infty$ and $\eta_n\asymp (\log n)^2/n$,
+  \[
+    \norm{(C_\nu+\eta_n I)^{-1/2}(C_\nu-C_{\nu,n})(C_\nu+\eta_n I)^{-1/2}}_{\op}
+    =
+    O_p\!\left(\sqrt{\frac{\log n}{n\eta_n}}\right)
+    =O_p\!\left((\log n)^{-1/2}\right)
+    =o_p(1);
+  \]
+  \item if $r_\nu<\infty$ and $\eta_n\asymp n^{-1}$,
+  \[
+    \norm{(C_\nu+\eta_n I)^{-1/2}(C_\nu-C_{\nu,n})(C_\nu+\eta_n I)^{-1/2}}_{\op}
+    =
+    O_p(n^{-1/2})
+    =o_p(1).
+  \]
+\end{enumerate}
+\end{lemma}
+
+
+
+
+
+\begin{proof}
+We adapt the self-adjoint operator Bernstein inequality stated in
+\citet[Theorem~27]{fischer2020sobolev}. Their theorem is adapted from \cite{lincevher2020} and \cite{minsker2017extensions}.
+
+Their theorem states the following.
+Let $\xi$ be a random self-adjoint Hilbert--Schmidt operator satisfying
+\[
+    \norm{\xi}_{\op}\leq B
+    \qquad\text{a.s.},
+\]
+and suppose that there exists a positive, self-adjoint, trace-class operator
+$V$ such that
+\[
+    \E[\xi^2]\preceqL V.
+\]
+Then, defining
+\[
+    g(V)
+    :=
+    \log\!\left(
+        2e\frac{\tr(V)}{\norm{V}_{\op}}
+    \right),
+\]
+for every $\tau\geq1$, with probability at least $1-2e^{-\tau}$,
+\begin{equation}
+\label{eq:fischer_operator_bernstein}
+    \left\|
+        \frac1n\sum_{i=1}^n\xi_i-\E\xi
+    \right\|_{\op}
+    \leq
+    \frac{4\tau B g(V)}{3n}
+    +
+    \sqrt{
+        \frac{2\tau\norm{V}_{\op}g(V)}{n}
+    }.
+\end{equation}
+We now identify the quantities $B$, $V$, and $g(V)$ in our setting.
+
+For $x\in\X$, let
+\[
+    C_x:=K_x\otimes K_x
+\]
+and define the whitened random operator
+\[
+    \xi_i
+    :=
+    (C_\nu+\eta I)^{-1/2}
+    C_{X_i}
+    (C_\nu+\eta I)^{-1/2}.
+\]
+Writing
+\[
+    h_x:=(C_\nu+\eta I)^{-1/2}K_x,
+\]
+we have
+\[
+    \xi_i=h_{X_i}\otimes h_{X_i}.
+\]
+Thus $\xi_i$ is positive, self-adjoint, rank one, and hence
+Hilbert--Schmidt, as required by Theorem~27.
+
+We first identify the uniform operator bound $B$. Since
+\[
+    \norm{h\otimes h}_{\op}=\norm{h}_{\F}^2,
+\]
+we obtain
+\begin{align*}
+    \norm{\xi_i}_{\op}
+    &=
+    \norm{h_{X_i}}_{\F}^2 \\
+    &=
+    \left\langle
+        K_{X_i},
+        (C_\nu+\eta I)^{-1}K_{X_i}
+    \right\rangle_{\F} \\
+    &=
+    \Ncal_{X_i}(\eta).
+\end{align*}
+By \eqref{eq:bounded_leverage} and \eqref{eq:uniform_leverage_finite}, in either spectral regime,
+\[
+    \Ncal_{X_i}(\eta)
+    \leq
+    L_\eta
+    \qquad\text{a.s.}
+\]
+Therefore, we may take
+\begin{equation}
+\label{eq:bernstein_B_identification}
+    B_\eta
+    :=
+    L_\eta.
+\end{equation}
+
+Next, the expectation of $\xi_i$ is
+\begin{align*}
+    \E[\xi_i]
+    &=
+    (C_\nu+\eta I)^{-1/2}
+    \E[C_{X_i}]
+    (C_\nu+\eta I)^{-1/2} \\
+    &=
+    (C_\nu+\eta I)^{-1/2}
+    C_\nu
+    (C_\nu+\eta I)^{-1/2}.
+\end{align*}
+Since $\xi_i=h_{X_i}\otimes h_{X_i}$ is rank one,
+\[
+    \xi_i^2
+    =
+    \norm{h_{X_i}}_{\F}^2\xi_i.
+\]
+Using the bound $\Ncal_{X_i}(\eta)\le L_\eta$,
+\[
+    \xi_i^2
+    \preceqL
+    L_\eta\xi_i.
+\]
+Taking expectations gives
+\[
+    \E[\xi_i^2]
+    \preceqL
+    L_\eta\E[\xi_i].
+\]
+Hence the operator $V$ can be chosen as
+\begin{equation}
+\label{eq:bernstein_V_identification}
+    V_\eta
+    :=
+    L_\eta\E[\xi_i].
+\end{equation}
+Since $\E[\xi_i]$ is positive, self-adjoint, and trace class, so is
+$V_\eta$.
+
+It remains to identify $\norm{V_\eta}_{\op}$ and $g(V_\eta)$. We have
+\[
+    \norm{\E[\xi_i]}_{\op}
+    =
+    \sup_j\frac{\mu_j}{\mu_j+\eta}
+    =
+    \frac{\norm{C_\nu}_{\op}}
+         {\norm{C_\nu}_{\op}+\eta}.
+\]
+Therefore,
+\begin{equation}
+\label{eq:bernstein_V_norm}
+    \norm{V_\eta}_{\op}
+    =
+    L_\eta
+    \frac{\norm{C_\nu}_{\op}}
+         {\norm{C_\nu}_{\op}+\eta}.
+\end{equation}
+Moreover,
+\[
+    \tr(\E[\xi_i])
+    =
+    \tr\!\left(
+        C_\nu(C_\nu+\eta I)^{-1}
+    \right)
+    =
+    \Ncal_\nu(\eta)
+    \leq
+    M_\eta,
+\]
+where the final inequality follows from \Cref{assump:krr}: in the infinite-rank case $M_\eta=D\eta^{-p}$, while in the finite-rank case $\Ncal_\nu(\eta)\le r_\nu=M_\eta$. We finally obtain
+\begin{align*}
+    g(V_\eta)
+    &=
+    \log\!\left(
+        2e
+        \frac{\tr(V_\eta)}
+             {\norm{V_\eta}}
+    \right) \\
+    &=
+    \log\!\left(
+        2e
+        \frac{\tr(\E[\xi_i])}
+             {\norm{\E[\xi_i]}_{\op}}
+    \right) \\
+    &\leq
+    \log\!\left(
+        2eM_\eta
+        \frac{\norm{C_\nu}_{\op}+\eta}
+             {\norm{C_\nu}_{\op}}
+    \right)
+    =
+    G_\eta.
+\end{align*}
+
+Finally, observe that
+\begin{align*}
+    \frac1n\sum_{i=1}^n\xi_i- \E[\xi_i]
+    &=
+    (C_\nu+\eta I)^{-1/2}
+    \left(
+        \frac1n\sum_{i=1}^n C_{X_i}-C_\nu
+    \right)
+    (C_\nu+\eta I)^{-1/2} \\
+    &=
+    (C_\nu+\eta I)^{-1/2}
+    (C_{\nu,n}-C_\nu)
+    (C_\nu+\eta I)^{-1/2}.
+\end{align*}
+
+We therefore have
+\[
+    B=B_\eta
+    =
+    L_\eta,
+    \qquad
+    V=V_\eta^{},
+    \qquad
+    g(V_\eta^{})\leq G_\eta.
+\]
+Substituting \eqref{eq:bernstein_B_identification} and
+\eqref{eq:bernstein_V_norm} into
+\eqref{eq:fischer_operator_bernstein} yields, with probability at least
+$1-2e^{-\tau}$,
+\begin{align*}
+  &\norm{
+    (C_\nu+\eta I)^{-1/2}
+    (C_{\nu,n} - C_\nu)
+    (C_\nu+\eta I)^{-1/2}
+  }_{\op}
+  \\
+  &\qquad\leq
+  \frac{4L_\eta\tau G_\eta}{3n}
+  +
+  \sqrt{
+    \frac{2L_\eta\tau G_\eta}{n}
+    \frac{\norm{C_\nu}_{\op}}
+         {\norm{C_\nu}_{\op}+\eta}
+  },
+\end{align*}
+
+which is \eqref{eq:operator_bernstein}.
+
+For the final assertion, let $\eta_n\asymp (\log n)^2/n$ if $r_\nu=\infty$ and $\eta_n\asymp n^{-1}$ if $r_\nu<\infty$.
+
+\medskip
+\noindent\textbf{Infinite-rank case.}
+Then
+\[
+  L_{\eta_n}=\frac{\kappa^2}{\eta_n}
+  \asymp \frac{n}{(\log n)^2},
+  \qquad
+  M_{\eta_n}=D\eta_n^{-p}\asymp \frac{n^p}{(\log n)^{2p}},
+\]
+and
+\[
+  \frac{\norm{C_\nu}_{\op}+\eta_n}{\norm{C_\nu}_{\op}}
+  =O(1),
+\]
+so
+\[
+  G_{\eta_n}=O(\log n).
+\]
+The first term in \eqref{eq:operator_bernstein} is therefore
+\[
+  O_p\!\left(\frac{\log n}{n\eta_n}\right)
+  =O_p\!\left((\log n)^{-1}\right),
+\]
+while the second term is
+\[
+  O_p\!\left(
+  \sqrt{\frac{\log n}{n\eta_n}}
+  \right)
+  =O_p\!\left((\log n)^{-1/2}\right).
+\]
+The second term dominates asymptotically, and hence
+\[
+  \norm{
+    (C_\nu+\eta_n I)^{-1/2}
+    (C_\nu-C_{\nu,n})
+    (C_\nu+\eta_n I)^{-1/2}
+  }_{\op}
+  =
+  O_p\!\left(
+    \sqrt{\frac{\log n}{n\eta_n}}
+  \right)
+  =O_p\!\left((\log n)^{-1/2}\right)
+  =o_p(1).
+\]
+
+\medskip
+\noindent\textbf{Finite-rank case.}
+Here
+\[
+  L_{\eta_n}=A_{\mathrm u}^{\mathrm{fin}}=O(1),
+  \qquad
+  M_{\eta_n}=r_\nu=O(1),
+\]
+and therefore $G_{\eta_n}=O(1)$. Consequently,
+\[
+  \norm{
+    (C_\nu+\eta_n I)^{-1/2}
+    (C_\nu-C_{\nu,n})
+    (C_\nu+\eta_n I)^{-1/2}
+  }_{\op}
+  =
+  O_p(n^{-1/2})
+  =o_p(1).
+\]
+\end{proof}
+
+
+
+
+For completeness, in the stratified case apply the same Bernstein argument within each environment after whitening by $(C_\nu+\eta I)^{-1/2}$. Since $C_g\preceq\pi_g^{-1}C_\nu$, the whitened expectation has bounded operator norm. Its trace is at most $\pi_g^{-1}\Ncal_\nu(\eta)$. Thus the envelopes and logarithmic factors have the same orders, with constants depending on the fixed positive $\pi_g$. Summing the two centered errors proves the stated orders for $C_{\nu,n}-C_\nu$.
+
+\begin{lemma}[Operator form of the debiasing weights]
+\pdfbookmark[2]{Lemma \thelemma}{lemma.bookmark.\thelemma}
+\label{lem:weight_operator_form}
+Let $S_n$ be the sampling operator from \Cref{defn:sampling_operator}. 
+If the optimal dual multiplier is $\mu^\star=\eta^{-1}$, then
+\begin{equation}
+ \widehat\omega_i=\widehat t_{E_i}
+ \left((D_{\nu,n}+\eta I)^{-1}K_{x_0}\right)(X_i),\qquad i=1,\ldots,n.
+ \label{eq:weight_operator_form}
+\end{equation}
+Equivalently,
+\begin{equation}
+ \widehat\omega=n(K+n\eta W)^{-1}k_0.
+ \label{eq:weight_matrix_form}
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+We first establish the intertwining identity for the bounded operators $\widetilde S_n^*\widetilde S_n$ and $\widetilde S_n\widetilde S_n^*$:
+\begin{equation}
+  \widetilde S_n h(\widetilde S_n^*\widetilde S_n)
+  =
+  h(\widetilde S_n\widetilde S_n^*)\widetilde S_n
+  \label{eq:intertwining}
+\end{equation}
+for every continuous function $h$ on a compact interval containing the spectra of
+$\widetilde S_n^*\widetilde S_n$ and $\widetilde S_n\widetilde S_n^*$.
+
+For the monomial $h(t)=t^m$, we claim that
+\[
+  \widetilde S_n(\widetilde S_n^*\widetilde S_n)^m
+  =
+  (\widetilde S_n\widetilde S_n^*)^m\widetilde S_n,
+  \qquad m\ge0.
+\]
+The case $m=0$ is immediate. If the identity holds for some $m$, then
+\begin{align*}
+  \widetilde S_n(\widetilde S_n^*\widetilde S_n)^{m+1}
+  &=
+  \widetilde S_n(\widetilde S_n^*\widetilde S_n)^m(\widetilde S_n^*\widetilde S_n) \\
+  &=
+  (\widetilde S_n\widetilde S_n^*)^m \widetilde S_n\widetilde S_n^*\widetilde S_n \\
+  &=
+  (\widetilde S_n\widetilde S_n^*)^{m+1}\widetilde S_n.
+\end{align*}
+Thus the identity holds for all $m$ by induction. By linearity of the functional
+calculus, it therefore holds for every polynomial $p$:
+\[
+  \widetilde S_np(\widetilde S_n^*\widetilde S_n)
+  =
+  p(\widetilde S_n\widetilde S_n^*)\widetilde S_n.
+\]
+
+Now let $h$ be continuous on a compact interval $[0,M]$ containing both spectra.
+By the Weierstrass approximation theorem, there exist polynomials $p_j$ such that
+\[
+  \sup_{t\in[0,M]}|p_j(t)-h(t)|\to0.
+\]
+Since $\widetilde S_n^*\widetilde S_n$ and $\widetilde S_n\widetilde S_n^*$ are bounded, this implies
+\[
+  \widetilde S_np_j(\widetilde S_n^*\widetilde S_n)\to \widetilde S_nh(\widetilde S_n^*\widetilde S_n),
+  \qquad
+  p_j(\widetilde S_n\widetilde S_n^*)\widetilde S_n\to h(\widetilde S_n\widetilde S_n^*)\widetilde S_n
+\]
+in operator norm. Taking limits in
+\[
+  \widetilde S_np_j(\widetilde S_n^*\widetilde S_n)
+  =
+  p_j(\widetilde S_n\widetilde S_n^*)\widetilde S_n
+\]
+thus proves \eqref{eq:intertwining}.
+
+For $\eta > 0$, take now the function
+\[
+  h(t)=\frac{1}{t+\eta}.
+\]
+Since
+\[
+ \widetilde S_n^*\widetilde S_n=D_{\nu,n},\qquad
+ \widetilde S_n\widetilde S_n^*=\frac1n\widetilde K,\qquad
+ \widetilde S_nK_{x_0}=W^{-1/2}k_0,
+\]
+the intertwining identity yields
+\begin{align*}
+ W^{-1/2}\widetilde S_n(D_{\nu,n}+\eta I)^{-1}K_{x_0}
+ &=nW^{-1/2}(\widetilde K+n\eta I)^{-1}W^{-1/2}k_0\\
+ &=n(K+n\eta W)^{-1}k_0.
+\end{align*}
+The left-hand side is $W^{-1}S_n(D_{\nu,n}+\eta I)^{-1}K_{x_0}$, whose $i$th component is the expression in \eqref{eq:weight_operator_form}. Finally, substituting $\mu^\star=\eta^{-1}$ into the dual recovery formula gives the same matrix expression.
+\end{proof}
+
+
+
+\begin{lemma}[Expectation of truncated second moment]
+\pdfbookmark[2]{Lemma \thelemma}{lemma.bookmark.\thelemma}
+\label{lem:truncated_second_moment}
+Suppose that the errors $U_i$ satisfy
+\[
+\E[U_i\mid X_i,E_i]=0,
+\qquad
+\E[|U_i|^j\mid X_i,E_i]
+\leq
+\frac{j!}{2}B_U^2 L^{j-2},
+\qquad j\geq 2.
+\]
+Then, for every $t\geq 0$,
+\begin{equation}
+\label{eq:truncated_2nd_moment_tail_bound}
+\E\!\left[
+    U_i^2\bm{1}\{|U_i|>t\}
+    \,\middle|\,X_i,E_i
+\right]
+\leq
+C(B_U^2+L^2)
+\exp\!\left\{
+    -c\min\left(
+        \frac{t^2}{B_U^2},
+        \frac{t}{L}
+    \right)
+\right\},
+\end{equation}
+where the constants $C,c>0$ are independent of $t$.
+\end{lemma}
+
+\begin{proof}
+From the Bernstein condition, for $0<\lambda<1/L$,
+\begin{align*}
+\E[e^{\lambda U_i}\mid X_i,E_i]
+&=
+1+\sum_{j=2}^\infty
+\frac{\lambda^j}{j!}\E[U_i^j\mid X_i,E_i]
+\\
+&\leq
+1+\frac{1}{2}
+\sum_{j=2}^\infty
+\lambda^jB_U^2L^{j-2}
+\\
+&=
+1+\frac{B_U^2\lambda^2}{2}
+\sum_{j=2}^\infty(\lambda L)^{j-2}
+\\
+&=
+1+
+\frac{B_U^2\lambda^2}
+     {2(1-\lambda L)}
+\\
+&\leq
+\exp\!\left\{
+    \frac{B_U^2\lambda^2}
+         {2(1-\lambda L)}
+\right\}.
+\end{align*}
+The interchange between expectation and summation is justified by
+absolute convergence under the Bernstein moment condition. The last
+inequality follows from $1+x\leq e^x$.
+
+By Chernoff's inequality,
+\[
+\Pp(U_i>t\mid X_i,E_i)
+\leq
+\exp\!\left\{
+    -\lambda t+
+    \frac{B_U^2\lambda^2}
+         {2(1-\lambda L)}
+\right\}.
+\]
+Setting
+\[
+\lambda
+=
+\frac{t}{B_U^2+Lt},
+\]
+we obtain
+\[
+\Pp(U_i>t\mid X_i,E_i)
+\leq
+\exp\!\left\{
+    -\frac{t^2}
+           {2(B_U^2+Lt)}
+\right\}.
+\]
+Applying the same argument to $-U_i$ gives the two-sided
+sub-exponential tail bound
+\begin{equation}
+\label{eq:bernstein_error_tail}
+\Pp(|U_i|>t\mid X_i,E_i)
+\leq
+2\exp\!\left\{
+    -c\min\left(
+        \frac{t^2}{B_U^2},
+        \frac{t}{L}
+    \right)
+\right\},
+\end{equation}
+for some constant $c>0$.
+
+From the tail-integration formula,
+\begin{align*}
+\E\!\left[
+    U_i^2\bm{1}\{|U_i|>t\}
+    \,\middle|\,X_i,E_i
+\right]
+&=
+t^2\Pp(|U_i|>t\mid X_i,E_i)
++
+2\int_t^\infty
+u\,\Pp(|U_i|>u\mid X_i,E_i)\,du
+\\
+&\leq
+\underbrace{
+2t^2
+\exp\!\left\{
+    -c\min\left(
+        \frac{t^2}{B_U^2},
+        \frac{t}{L}
+    \right)
+\right\}
+}_{(A)}
+\\
+&\qquad
++
+\underbrace{
+4\int_t^\infty
+u
+\exp\!\left\{
+    -c\min\left(
+        \frac{u^2}{B_U^2},
+        \frac{u}{L}
+    \right)
+\right\}
+\,du
+}_{(B)}.
+\end{align*}
+
+For $(A)$, consider separately the cases
+\[
+0\leq t\leq \frac{B_U^2}{L}
+\qquad\text{and}\qquad
+t>\frac{B_U^2}{L}.
+\]
+In the first case,
+\[
+A
+=
+2t^2e^{-ct^2/B_U^2}
+\leq
+C_1B_U^2
+e^{-c_1t^2/B_U^2},
+\]
+while in the second case,
+\[
+A
+=
+2t^2e^{-ct/L}
+\leq
+C_1L^2e^{-c_1t/L},
+\]
+where $C_1,c_1>0$ are independent of $t$. Hence,
+\[
+A
+\leq
+C_1(B_U^2+L^2)
+\exp\!\left\{
+    -c_1\min\left(
+        \frac{t^2}{B_U^2},
+        \frac{t}{L}
+    \right)
+\right\}.
+\]
+
+Similarly, for $(B)$, consider the same two cases. If
+$t\leq B_U^2/L$, split the integral at
+$B_U^2/L$:
+\begin{align*}
+B
+&\leq
+4\int_t^{B_U^2/L}
+u e^{-cu^2/B_U^2}\,du
++
+4\int_{B_U^2/L}^\infty
+u e^{-cu/L}\,du
+\\
+&\leq
+C_2(B_U^2+L^2)
+e^{-c_2t^2/B_U^2}.
+\end{align*}
+If $t>B_U^2/L$, then
+\begin{align*}
+B
+&\leq
+4\int_t^\infty
+u e^{-cu/L}\,du
+\\
+&\leq
+C_2L^2e^{-c_2t/L}.
+\end{align*}
+Therefore,
+\[
+B
+\leq
+C_2(B_U^2+L^2)
+\exp\!\left\{
+    -c_2\min\left(
+        \frac{t^2}{B_U^2},
+        \frac{t}{L}
+    \right)
+\right\}.
+\]
+
+Combining the bounds for $(A)$ and $(B)$ and adjusting the constants
+$C,c>0$ gives
+\[
+\E\!\left[
+    U_i^2\bm{1}\{|U_i|>t\}
+    \,\middle|\,X_i,E_i
+\right]
+\leq
+C(B_U^2+L^2)
+\exp\!\left\{
+    -c\min\left(
+        \frac{t^2}{B_U^2},
+        \frac{t}{L}
+    \right)
+\right\},
+\]
+which proves the claim.
+\end{proof}
+
+
+
+% ============================================================
+
+\begin{lemma}[Spectral and source conditions for the mixture]\label{lem:mixture_source}
+\pdfbookmark[2]{Lemma \thelemma}{lemma.bookmark.\thelemma}
+Suppose the two-sided eigenvalue condition and the source condition in \Cref{assump:krr} hold separately under $\nu_g$, with exponents $p_g$ and $\beta_g$. Then they hold for $\nu$ with $p=\max_gp_g$ and $\beta=\min_g\beta_g$.
+\end{lemma}
+\begin{proof}
+Since $C_\nu\succeq\pi_gC_g$, the min--max principle gives the lower eigenvalue bound using an environment with exponent $p$. For the upper bound, the intersection of two subspaces of codimension $j-1$ has codimension at most $2j-2$, giving
+\[
+ \mu_{2j-1}(C_\nu)\leq\pi_e\mu_j(C_e)+\pi_f\mu_j(C_f)\lesssim j^{-1/p}.
+\]
+Monotonicity gives the upper bound for all indices.
+
+Put $s=(\beta-1)/2\in(0,1/2]$. The first-power isometry and the environmental source conditions give $f_0=C_g^sv_g$ for fixed $v_g\in\F$. For $0<r<1$, the scalar identity
+\[
+ t^r=\frac{\sin(\pi r)}\pi\int_0^\infty\frac{t}{t+u}u^{r-1}\,du
+\]
+and inverse-order monotonicity show that positive operator powers preserve Loewner order for $0<r\leq1$. Apply this with $r=2s$ to get
+\[
+ C_g^{2s}\preceq\pi_g^{-2s}C_\nu^{2s},\qquad
+ \norm{C_g^sz}_{\F}\leq\pi_g^{-s}\norm{C_\nu^sz}_{\F}.
+\]
+The map $C_\nu^sz\mapsto C_g^sz$ extends to a bounded map on the closure of its range. Taking its adjoint gives $C_g^s=C_\nu^sB_g$ for a bounded operator $B_g$. Hence $f_0=C_\nu^sB_gv_g$, which is the pooled source condition. No commutation of the environment operators is required.
+\end{proof}
+
+\begin{lemma}[Regularized precision-weighted covariance concentration]\label{lem:precision_concentration}
+\pdfbookmark[2]{Lemma \thelemma}{lemma.bookmark.\thelemma}
+Suppose \Cref{assump:model,assump:krr} hold, and construct the variance estimates as in \eqref{eq:sigma_hat}. If $\eta_n\asymp(\log n)^2/n$ in the infinite-rank case or $\eta_n\asymp n^{-1}$ in the finite-rank case, then
+\[
+ E_n:=(D_\nu+\eta_n I)^{-1/2}(D_{\nu,n}-D_\nu)(D_\nu+\eta_n I)^{-1/2},
+ \qquad \norm{E_n}_{\op}=o_p(1).
+\]
+Moreover,
+\begin{align}
+ &\norm{(D_\nu+\eta_n I)^{1/2}
+ \{(D_{\nu,n}+\eta_n I)^{-1}-(D_\nu+\eta_n I)^{-1}\}K_{x_0}}_{\F}\nonumber\\
+ &\qquad=o_p\!\left(\sqrt{\Ncal_{D,x_0}(\eta_n)}\right).
+ \label{eq:representer_perturbation}
+\end{align}
+\end{lemma}
+\begin{proof}
+First use the true precisions in the empirical operator. Let $l=\min_gt_g>0$ and $u=\max_gt_g<\infty$. The whitened summands are
+\[
+ t_{E_i}(D_\nu+\eta I)^{-1/2}(K_{X_i}\otimes K_{X_i})(D_\nu+\eta I)^{-1/2}.
+\]
+Their norms are at most $u\kappa^2/\eta$, and their expected operator has norm at most one. Its trace is at most $\operatorname{tr}(D_\nu)/\eta$, giving a logarithmic factor $O(\log(1/\eta))$. The same operator Bernstein calculation as in \Cref{lem:operator_bernstein} gives
+\[
+ O_p\!\left(\sqrt{\frac{\log n}{n\eta_n}}+
+ \frac{\log n}{n\eta_n}\right)=o_p(1)
+\]
+in the infinite-rank case. In the finite-rank case, the positive spectral gap gives $O_p(n^{-1/2})$. For fixed strata, apply the bound separately within each environment and sum.
+
+By \Cref{prop:noise_variances}, $\max_g|\widehat t_g/t_g-1|=o_p(1)$. The whitened error from substituting estimated precisions is bounded in norm by this maximum times the norm of the whitened empirical operator with true precisions, which is $O_p(1)$. This proves $\norm{E_n}_{\op}=o_p(1)$.
+
+Finally,
+\[
+ (D_\nu+\eta I)^{1/2}(D_{\nu,n}+\eta I)^{-1}K_{x_0}
+ =(I+E_n)^{-1}(D_\nu+\eta I)^{-1/2}K_{x_0}.
+\]
+On $\norm{E_n}_{\op}<1$, subtracting the population expression bounds the norm in \eqref{eq:representer_perturbation} by
+\[
+ \frac{\norm{E_n}_{\op}}{1-\norm{E_n}_{\op}}
+ \sqrt{\Ncal_{D,x_0}(\eta_n)},
+\]
+which proves the claim.
+\end{proof}
+
+\begin{lemma}[Variance scale under the pooled leverage assumption]\label{lem:weighted_scale}
+\pdfbookmark[2]{Lemma \thelemma}{lemma.bookmark.\thelemma}
+Suppose \Cref{assump:model,assump:local_leverage} hold and $r_\nu=\infty$. Then
+\[
+ \Ncal_{D,x_0}(\eta)\asymp\Ncal_{x_0}(\eta)\asymp\eta^{-a},
+ \qquad
+ \inner{(D_\nu+\eta I)^{-1}K_{x_0}}
+ {D_\nu(D_\nu+\eta I)^{-1}K_{x_0}}_{\F}\asymp\eta^{-a}.
+\]
+\end{lemma}
+\begin{proof}
+Let $l=\min_gt_g>0$ and $u=\max_gt_g<\infty$. Since $lC_\nu\preceq D_\nu\preceq uC_\nu$, inversion gives
+\[
+ \frac1u\Ncal_{x_0}(\eta/u)\leq\Ncal_{D,x_0}(\eta)
+ \leq\frac1l\Ncal_{x_0}(\eta/l).
+\]
+Thus, for some constants $L_0,U_0>0$ and all small $\eta$,
+$L_0\eta^{-a}\leq\Ncal_{D,x_0}(\eta)\leq U_0\eta^{-a}$.
+Let $b_j:=\inner{K_{x_0}}{\psi_j}_{\F}$. Write the variance quadratic form as
+\[
+ V(\eta)=\sum_j\frac{\rho_jb_j^2}{(\rho_j+\eta)^2}\leq\Ncal_{D,x_0}(\eta).
+\]
+Next, we use a helper function to sandwich our target, as in the unweighted variance argument. For fixed $b>1$,
+\begin{align*}
+ b\Ncal_{D,x_0}(b\eta)-\Ncal_{D,x_0}(\eta)
+ &=(b-1)\sum_j\frac{\rho_jb_j^2}{(\rho_j+\eta)(\rho_j+b\eta)}\\
+ &\leq(b-1)V(\eta).
+\end{align*}
+Choose $b$ large enough that $L_0b^{1-a}>U_0$. Then
+\[
+ V(\eta)\geq\frac{L_0b^{1-a}-U_0}{b-1}\eta^{-a}.
+\]
+This proves the variance comparison using only regular variation for $C_\nu$. It also implies $\eta\Ncal_{D,x_0}(\eta)\to0$.
+\end{proof}
+
+\begin{lemma}[Vanishing normalized population weighted moments]\label{lem:weak_representer}
+\pdfbookmark[2]{Lemma \thelemma}{lemma.bookmark.\thelemma}
+Suppose \Cref{assump:model,assump:local_leverage} hold and $r_\nu=\infty$. For every fixed $b=b(X,E)\in L_2(\mathbb P_{X,E})$,
+\[
+ \frac{\E[t_E\{(D_\nu+\eta I)^{-1}K_{x_0}\}(X)b(X,E)]}{\sqrt{V(\eta)}}\longrightarrow0,
+\]
+where $V(\eta)$ is the population variance quadratic form in \Cref{lem:weighted_scale}.
+\end{lemma}
+\begin{proof}
+We use the $L_2$ space for the finite measure $t_E\,d\mathbb P_{X,E}$ and write its inner product as $\inner{\cdot}{\cdot}_t$. The bounds $0<l\leq t_E\leq u<\infty$ make its norm equivalent to the original $L_2$ norm. Let $\mathcal H_t$ be the closure of the functions $f(X)$ with $f\in\F$ in this space. The functions
+\[
+ z_\eta(X,E):=\frac{\{(D_\nu+\eta I)^{-1}K_{x_0}\}(X)}{\sqrt{V(\eta)}}
+\]
+belong to $\mathcal H_t$ and have norm one. For every fixed $f\in\F$,
+\begin{align*}
+ \inner{z_\eta}{f}_t
+ &=\frac{\inner{(D_\nu+\eta I)^{-1}K_{x_0}}{D_\nu f}_{\F}}{\sqrt{V(\eta)}}\\
+ &=\frac{f(x_0)-\eta\inner{(D_\nu+\eta I)^{-1}K_{x_0}}{f}_{\F}}{\sqrt{V(\eta)}}.
+\end{align*}
+The numerator is bounded, since
+\[
+ \eta\norm{(D_\nu+\eta I)^{-1}K_{x_0}}_{\F}
+ \leq\sqrt{\eta\Ncal_{D,x_0}(\eta)}\longrightarrow0.
+\]
+The denominator diverges by \Cref{lem:weighted_scale}. Thus these inner products tend to zero. Density and the unit-norm bound extend this to all of $\mathcal H_t$. For arbitrary $b$ in the weighted $L_2$ space, its component orthogonal to $\mathcal H_t$ has zero inner product with $z_\eta$; projection proves the claim. In particular, it is not necessary that affine functions belong to $\F$, or that $\F$ be dense in all of $L_2(\nu)$.
+\end{proof}
+
+\begin{lemma}[Vanishing normalized empirical weighted moments]\label{lem:weighted_moments}
+\pdfbookmark[2]{Lemma \thelemma}{lemma.bookmark.\thelemma}
+Suppose Assumptions~\ref{assump:model}--\ref{assump:local_leverage} hold, $r_\nu=\infty$, and use the weights from \Cref{prop:regularized_gamma}. For every fixed $b=b(X,E)\in L_2(\mathbb P_{X,E})$,
+\[
+ \frac1n\sum_{i=1}^n\widehat\omega_i b(X_i,E_i)=o_p(\sqrt{V_n}).
+\]
+\end{lemma}
+\begin{proof}
+First use the population weights
+\[
+ \omega_i^\circ:=t_{E_i}\{(D_\nu+\eta_n I)^{-1}K_{x_0}\}(X_i).
+\]
+By regularized Cauchy--Schwarz and boundedness of the kernel,
+\[
+ |\{(D_\nu+\eta I)^{-1}K_{x_0}\}(x)|^2
+ \leq\frac{\kappa^2}{\eta}\Ncal_{D,x_0}(\eta).
+\]
+Independence of the second-fold observations gives
+\[
+ \operatorname{Var}\!\left(\frac1n\sum_i\omega_i^\circ b(X_i,E_i)\right)
+ \leq\frac{u^2\kappa^2\Ncal_{D,x_0}(\eta_n)}{n\eta_n}\E[b(X,E)^2]
+ =o(V_n).
+\]
+The same bound holds for the fixed-stratum mean centered at its pooled expectation. \Cref{lem:weak_representer} makes that expectation $o(\sqrt{V_n})$, proving the result for population weights.
+
+It remains to replace them by empirical weights. Write
+\begin{align*}
+ \widehat\omega_i-\omega_i^\circ
+ &=\widehat t_{E_i}\big\{(D_{\nu,n}+\eta_n I)^{-1}K_{x_0}
+              -(D_\nu+\eta_n I)^{-1}K_{x_0}\big\}(X_i)\\
+ &\quad+(\widehat t_{E_i}-t_{E_i})\{(D_\nu+\eta_n I)^{-1}K_{x_0}\}(X_i).
+\end{align*}
+For the first term, \Cref{lem:precision_concentration} and
+$D_{\nu,n}\preceq(1+\norm{E_n}_{\op})(D_\nu+\eta_n I)$ give an empirical squared norm of $o_p(\Ncal_{D,x_0}(\eta_n))$. For the second, factor out $\max_g|\widehat t_g-t_g|^2=o_p(1)$; the remaining empirical squared norm is $O_p(\Ncal_{D,x_0}(\eta_n))$ by the same operator comparison. The estimated precisions are bounded above and away from zero with probability tending to one. Consequently,
+\[
+ \frac1n\sum_i(\widehat\omega_i-\omega_i^\circ)^2
+ =o_p(\Ncal_{D,x_0}(\eta_n))=o_p(V_n).
+\]
+Since $n^{-1}\sum_i b(X_i,E_i)^2=O_p(1)$, empirical Cauchy--Schwarz proves the claim.
+\end{proof}
+
+\addcontentsline{toc}{section}{References}
+% ============================================================
+
+\begingroup
+\setstretch{1.1}
+\begin{thebibliography}{99}
+
+\bibitem[Lin and Cevher(2020)]{lincevher2020}
+J. Lin and V. Cevher.
+\newblock Optimal convergence for distributed learning with stochastic gradient methods and spectral algorithms.
+\newblock \emph{Journal of Machine Learning Research}, 21(147):1--63, 2020.
+
+\bibitem[Blanchard and M\"ucke(2018)]{blanchard2018optimal}
+G. Blanchard and N. M\"ucke.
+\newblock Optimal rates for regularization of statistical inverse learning problems.
+\newblock \emph{Foundations of Computational Mathematics}, 18(4):971--1013, 2018.
+
+\bibitem[Caponnetto and De Vito(2007)]{caponnetto2007optimal}
+A. Caponnetto and E. De Vito.
+\newblock Optimal rates for the regularized least-squares algorithm.
+\newblock \emph{Foundations of Computational Mathematics}, 7:331--368, 2007.
+
+\bibitem[Fischer and Steinwart(2020)]{fischer2020sobolev}
+S. Fischer and I. Steinwart.
+\newblock Sobolev norm learning rates for regularized least-squares algorithms.
+\newblock \emph{Journal of Machine Learning Research}, 21(205):1--38, 2020.
+
+\bibitem[Lin et~al.(2020)Lin, Rudi, Rosasco, and Cevher]{lin2020optimal}
+J. Lin, A. Rudi, L. Rosasco, and V. Cevher.
+\newblock Optimal rates for spectral algorithms with least-squares regression over Hilbert spaces.
+\newblock \emph{Applied and Computational Harmonic Analysis}, 48(3):868--890, 2020.
+
+\bibitem[Minsker(2017)]{minsker2017extensions}
+S. Minsker.
+\newblock On some extensions of Bernstein's inequality for self-adjoint operators.
+\newblock \emph{Statistics \& Probability Letters}, 127:111--119, 2017.
+
+\bibitem[Pauwels et~al.(2018)Pauwels, Bach, and Vert]{pauwels2018relating}
+E. Pauwels, F. Bach, and J.-P. Vert.
+\newblock Relating leverage scores and density using regularized Christoffel functions.
+\newblock In \emph{Advances in Neural Information Processing Systems}, volume 31, 2018.
+\bibitem[Wahba(1990)]{wahba1990spline}
+G.~Wahba.
+\newblock \emph{Spline Models for Observational Data}.
+\newblock CBMS-NSF Regional Conference Series in Applied Mathematics, Vol.~59.
+\newblock SIAM, Philadelphia, 1990.
+
+\bibitem[Kimeldorf and Wahba(1971)]{kimeldorf1971some}
+G.~S.~Kimeldorf and G.~Wahba.
+\newblock Some results on Tchebycheffian spline functions.
+\newblock \emph{Journal of Mathematical Analysis and Applications},
+33(1):82--95, 1971.
+
+\end{thebibliography}
+\endgroup
+
+\end{document}
