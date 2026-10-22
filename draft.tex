@@ -342,31 +342,27 @@ Here $H_i\sim N(0,\Sigma_H)$, $\xi_{i,g}\sim N(0,\Sigma_g)$, and $H_i$ and $\xi_
  \Omega_g:=\Gamma^\top\Sigma_H\Gamma+\Sigma_g\succ0,
  \qquad P_g:=\Omega_g^{-1},\qquad c:=\Gamma^\top\Sigma_H\delta_0.
 \]
-The observations are either sampled i.i.d. from the working mixture, with $\Pr(E=g)=\pi_g>0$, or sampled independently within the two environments with fixed proportions $\pi_g$. For the stratified case, we take these proportions to be the same in each fold, so $n_g/n=m_g/m=\pi_g$.
+The observations are sampled independently within the two environments with fixed proportions $\pi_g$.
 
-We split the observations into two independent folds $I_1$ and $I_2$ with sizes $m$ and $n$, where $m/n\to\rho\in(0,\infty)$. Nuisance quantities are estimated using only $I_1$, and the GM estimator is constructed using $I_2$. Within $I_2$, we relabel the observations as $i=1,\ldots,n$.
+% We randomly split the observations into two independent folds $I_1$ and $I_2$ with sizes $m$ and $n$, where $m/n\to\rho\in(0,\infty)$, while keeping the environment proportions the same in each fold so $n_g/n=m_g/m=\pi_g$.  Nuisance quantities are estimated using only $I_1$, and the GM estimator is constructed using $I_2$. Within $I_2$, we relabel the observations as $i=1,\ldots,n$.
 
 The true regression function satisfies $f_0\in\F$, where $\F$ is a separable RKHS. The input space is $\X=\R^d$, the marginal distribution $\nu=\pi_e\nu_e+\pi_f\nu_f$ has full support on $\X$, and $K$ is continuous and uniformly bounded:
 \begin{equation}
  \sup_{x\in\X}K(x,x)\leq\kappa^2<\infty.
  \label{eq:bounded_kernel}
 \end{equation}
-Under these conditions, the canonical embedding is injective and
-\[
- \F=\F_\nu=(\ker I_\nu)^\perp=\overline{\ran(C_\nu)}.
-\]
-Lastly, let
-\[
- w_g(x):=P_g(x-\mu_g),\qquad
- V:=w_E(X)-\E[w_E(X)\mid X],\qquad M:=\E[VV^\top].
-\]
-We assume $M\succ0$ and $\sigma_{U,g}^2>0$ for $g\in\{e,f\}$, where $\sigma_{U,g}^2$ is defined below.
+% Under these conditions, the canonical embedding is injective and
+% \[
+%  \F=\F_\nu=(\ker I_\nu)^\perp=\overline{\ran(C_\nu)}.
+% \]
+
 \end{assumption}
 
 \begin{remark}
 Continuity of $K$ and full support of $\nu$ make the canonical embedding $I_\nu$ injective. Hence $\F_\nu=\F$.
 \end{remark}
 
+\begin{remark}
 By Gaussian conditioning,
 \begin{equation}
  \E[Y\mid X=x,E=g]=f_0(x)+c^\top P_g(x-\mu_g).
@@ -388,100 +384,93 @@ The conditional variance is constant within each environment:
  =\operatorname{Var}(\eps_i)+\delta_0^\top\Sigma_H\delta_0-c^\top P_gc.
  \label{eq:environment_variance}
 \end{equation}
-Moreover, the Gaussian regression residual is independent of $X$ within each environment. Since $\eps_i$ is sub-exponential, $U_i\mid(X_i,E_i=g)$ is also a centered sub-exponential random variable.
+Moreover, the residual $U$ is independent of $X$ within each environment. Since $\eps_i$ is a centered sub-exponential random variable, $U_i\mid(X_i,E_i=g)$ is also a centered sub-exponential random variable.
+
+\end{remark}
+
+\begin{assumption} 
+[Full rank of $\Sigma_e - \Sigma_f$]\label{assump:full_rank_of_cov_mat_diff}
+The lowest eigenvalue of $\Sigma_e - \Sigma_f$ is bounded away from zero
+\begin{equation}
+ \lambda_{\min}(\Sigma_e - \Sigma_f) > 0
+ \label{eq:full_rank_of_cov_mat_diff}
+\end{equation}
+\end{assumption}
 
 \begin{remark}
-The condition $M\succ0$ is the identification condition for the confounding parameter $c$. Indeed, $\E[V\mid X]=0$, $\E[VU]=0$, and $\E[Vw_E(X)^\top]=M$. Therefore,
-\[
- c=M^{-1}\E[VY].
-\]
 For two environments, if $q_g(x):=\Pr(E=g\mid X=x)$, then
 \[
- M=\E\!\left[q_e(X)q_f(X)\{w_e(X)-w_f(X)\}\{w_e(X)-w_f(X)\}^\top\right].
+ M=\E\!\left[q_e(X)q_f(X)\{(P_e-P_f)X -(P_e\mu_e - P_f\mu_f) \}\{(P_e-P_f)X -(P_e\mu_e - P_f\mu_f)\}^\top\right].
 \]
-In particular, $P_e-P_f$ having full rank is sufficient for $M\succ0$. This condition is separate from query point non-degeneracy.
+\noindent
+For every non-zero $u \in \R^d$,
+
+\[u^\top M u = \E[q_e(X)q_f(X)\{u^\top\left((P_e-P_f)X -(P_e\mu_e - P_f\mu_f)\right)\}^2] \]
+When $P_e-P_f$ or equivalently $\Sigma_e - \Sigma_f$ has full rank, the set
+
+\[\{x \in \R^d: u^\top(P_e-P_f)x = u^\top(P_e\mu_e - P_f\mu_f)\}\]
+
+is a hyperplane and therefore has probability zero under a nondegenerate Gaussian mixture. Therefore,
+
+\[u^\top M u > 0\],
+
+and $M$ would be invertible.
+
+
 \end{remark}
 
 \begin{assumption}[Conditions for the KRR minimax rate]\label{assump:krr}
-In addition to \Cref{assump:model}, suppose:
+
+In each of the environments $g \in \{e,f\}$, we assume the following:
+
 \begin{enumerate}[label=(\alph*),leftmargin=2.2em]
-  \item \textbf{Conditional Bernstein moments.} There exist $L,B_U>0$ such that, for every integer $m\ge2$,
+  \item \textbf{Conditional Bernstein moments.} There exists $L,B_U>0$ such that, for every integer $m\ge2$,
   \begin{equation}
     \E[|U_i|^m\mid X_i=x,E_i=g]
     \le \frac12m!B_U^2L^{m-2}
     \label{eq:bernstein_moments}
   \end{equation}
-  for $\nu_g$-almost every $x$ and each $g\in\{e,f\}$. This follows from the generating model with suitable constants $L$ and $B_U$.
+ This condition is implied by \ref{assump:model}.
 
   \item \textbf{Spectral behavior.} We distinguish the following two cases.
   \begin{enumerate}[label=(\roman*),leftmargin=2.2em]
-    \item \textbf{Infinite-rank case.} If $r_\nu=\infty$, assume the two-sided eigenvalue decay condition: for some $0<p<1$ and constants $0<c\le C<\infty$,
+    \item \textbf{Infinite-rank case.} If $f_0$ belongs to an infinite dimensional RKHS, we assume the two-sided eigenvalue decay condition in each environment $g \in \{e,f\}$. In each environment $g$, for some $0<p_g<1$ and constants $0<c_g\le C_g<\infty$,
     \begin{equation}
-      c j^{-1/p}\le\mu_j\le Cj^{-1/p},\qquad j\ge1.
+      c_g j^{-1/p}\le\mu_{g,j}\le C_gj^{-1/p},\qquad j\ge1.
       \label{eq:eigen_decay}
     \end{equation}
-    The upper bound implies $\Ncal_\nu(\lambda)\le D\lambda^{-p}$ for some $D>0$; the lower bound is needed for the matching minimax lower rate in the oracle regression problem.
 
-    \item \textbf{Finite-rank case.} If $r_\nu<\infty$, assume that $r_\nu$ is fixed and write
+    \item \textbf{Finite-rank case.} If $f_0$ belongs to an infinite dimensional RKHS,  for each environment $g \in \{e,f\}$, the lowest eigenvalue of the environment covariance operator is bounded away from zero 
     \begin{equation}
-      \mu_{\min}^+:=\mu_{r_\nu}>0.
+      \mu_{r_g}>0.
       \label{eq:finite_spectral_gap}
     \end{equation}
 
-    Also, this implies the bound on the effective dimension $\Ncal_\nu(\lambda)\le r_\nu
-     \text{ for every }\lambda>0.$
   \end{enumerate}
 
-  \item \textbf{Source condition.} We again distinguish the two cases.
+  \item \textbf{Source condition.}
   \begin{enumerate}[label=(\roman*),leftmargin=2.2em]
-    \item  For some $1<\beta\le2$ and $B>0$,
+    \item  For some $1<\beta_g\le2$ and $B_g>0$,
     \begin{equation}
-      [f_0]_\nu\in[\F]^\beta_\nu,\qquad
-      \norm{[f_0]_\nu}_{[\F]^\beta_\nu}\le B.
+      [f_0]_g\in[\F]^{\beta_g},\qquad
+      \norm{[f_0]_g}_{[\F]^{\beta_g}_g}\le B_g.
       \label{eq:source_condition}
     \end{equation}
-    Equivalently, there exists $[h_0]_\nu$ with $\norm{[h_0]_\nu}_{L_2(\nu)}\le B$ such that $[f_0]_\nu=T_\nu^{\beta/2}[h_0]_\nu$.
+    Equivalently, there exists $[h_0]_g$ with $\norm{[h_0]_g}_{L_2(\nu)}\le B_g$ such that $[f_0]_g=T_g^{{\beta_g}/2}[h_0]_g$.
   \end{enumerate}
 \end{enumerate}
 \end{assumption}
+
 \begin{remark}
-The spectral and source conditions above may instead be imposed separately in each environment, with exponents $p_g\in(0,1)$ and $\beta_g\in(1,2]$. Taking $p=\max_gp_g$ and $\beta=\min_g\beta_g$, \Cref{lem:mixture_source} shows that the pooled operator $C_\nu$ satisfies the displayed conditions. Thus these are the same KRR conditions, written for the working mixture.
+These conditions are similar to other papers in the literature examining optimal rates for KRR estimators \cite{blanchard2018optimal,fischer2020sobolev,lin2020optimal}. In the infinite-rank case, the source condition is necessary. Without one, restricted to estimation of $f_0$ in one environment alone, it can be shown that in an infinite-dimensional RKHS ball alone, there is no uniform RKHS-norm rate. The range $\beta>1$ yields consistency in the first power norm, and hence in $\F$ under \Cref{assump:model}. 
 \end{remark}
+
 \begin{remark}
 For the finite-rank case, the source condition is automatically satisfied since there are only finitely many positive eigenvalues.
 \end{remark}
-\begin{remark}
-These conditions are similar to other papers in the literature examining optimal rates for KRR estimators \cite{blanchard2018optimal,fischer2020sobolev,lin2020optimal}. In the infinite-rank case, the source condition is necessary. Without one, it can be shown that in an infinite-dimensional RKHS ball alone, there is no uniform RKHS-norm rate. The range $\beta>1$ yields consistency in the first power norm, and hence in $\F$ under \Cref{assump:model}. 
-\end{remark}
-
-\begin{remark}
-Under \Cref{assump:model}, for every $\eta>0$,
-\begin{equation}
-  \sup_{x\in\X}\Ncal_x(\eta)
-  \le \frac{\kappa^2}{\eta},
-  \label{eq:bounded_leverage}
-\end{equation}
-since $(C_\nu+\eta I)^{-1}\preceqL\eta^{-1}I$ and $\norm{K_x}_{\F}^2=K(x,x)\le\kappa^2$.
-\end{remark}
-
-\begin{remark}
-    For the finite case, if $r_\nu<\infty$,  \eqref{eq:finite_spectral_gap} from \Cref{assump:krr} implies the following uniform bound
-  \begin{equation}
-    \esssup_{x\sim\nu}\Ncal_x(\eta)
-    \le
-    \frac{\kappa^2}{\mu_{\min}^+}
-    =:A_{\mathrm u}^{\mathrm{fin}}
-    \qquad\text{for all }\eta>0.
-    \label{eq:uniform_leverage_finite}
-  \end{equation}
-\end{remark}
-
-\begin{remark}
-This is the uniform envelope needed for the operator Bernstein inequality used in the proofs for the ratio consistency of the variance proxy and the vanishing of the max-to-sum ratio. In the infinite-rank case, \eqref{eq:bounded_leverage} follows directly from boundedness of the kernel. We choose $\eta_n\asymp (\log n)^2/n$, so that $n\eta_n/\log n\to\infty$. In the finite-rank case, the uniform bound follows directly from the positive spectral gap.
-\end{remark}
 
 \begin{assumption}[Local leverage regular variation at $x_0$]\label{assump:local_leverage}
- If $r_\nu=\infty$, there exist $A_0>0$ and $0<a<1$ such that
+ If $f_0$ belongs to an infinite dimensional RKHS, there exist $A_0>0$ and $0<a<1$ such that
   \begin{equation}
     \Ncal_{x_0}(\eta)\sim A_0\eta^{-a}\qquad(\eta\downarrow0).
     \label{eq:local_regular_variation}
@@ -494,46 +483,14 @@ This is the uniform envelope needed for the operator Bernstein inequality used i
 
 \end{assumption}
 
-\begin{remark}
- For the finite rank case when $r_\nu<\infty$, \Cref{assump:model} implies
-  \begin{equation}
-    \Ncal_{x_0}(\eta)
-    \longrightarrow
-    \inner{K_{x_0}}{C_\nu^\dagger K_{x_0}}_{\F}
-    =:A_0^{\mathrm{fin}}
-    \in(0,\infty)
-    \qquad(\eta\downarrow0),
-    \label{eq:local_finite_limit}
-  \end{equation}
-  and, for every fixed $c>0$,
-  \begin{equation}
-    \frac{\Ncal_{x_0}(c\eta)}{\Ncal_{x_0}(\eta)}
-    \longrightarrow 1.
-    \label{eq:local_ratio_finite}
-  \end{equation}
-\end{remark}
-\begin{remark}
-The local leverage assumption and the bounded-kernel leverage bound serve different purposes. Equation~\eqref{eq:bounded_leverage} controls random design points uniformly. \Cref{assump:local_leverage} determines the variance scale at the fixed point $x_0$. In the infinite-rank case, for the Mat\'ern kernels covered by the local regularized-Christoffel asymptotics of \citet{pauwels2018relating}, those results imply this condition when their kernel hypotheses hold and the design density is bounded, continuous, and strictly positive at $x_0$, with
-\[
-  a=\frac{d}{2\nu_{\mathrm M}+d}.
-\]
-Thus a nondegenerate Gaussian mixture satisfies the stated density conditions at any fixed $x_0$, while boundedness of the kernel supplies \eqref{eq:bounded_leverage} on all of $\R^d$. In the finite-rank case, the leverage remains bounded and converges to \eqref{eq:local_finite_limit}; this corresponds to the case $a=0$ rather than a regularly varying divergence.
-\end{remark}
 
 \begin{assumption}[Query point non-degeneracy]\label{assump:nondegeneracy}
 We assume $k_0=(K(x_0,X_1),\ldots,K(x_0,X_n))^\top$ is non-zero almost surely. This implies that the objective function in \Cref{prop:gm_dual} is strictly concave, which is necessary to show $\mu_n^\star=\eta_n^{-1}$ in \Cref{prop:regularized_gamma}.
 \end{assumption}
 
-\begin{remark}
-    A Mat\'ern kernel, for example, automatically fulfills this condition since its values are strictly positive for every finite Euclidean distance between $x_0$ and $X_i$.
-\end{remark}
-
 
 % ============================================================
 
-\begin{remark}
-The CLT under estimated confounding below concerns the infinite-rank case $0<a<1$. The finite-rank statements are retained for the KRR rate, alignment, and variance calculations. In finite rank, first-fold nuisance estimation need not be negligible under the same studentization.
-\end{remark}
 
 \section{Methodology}
 % ============================================================
@@ -744,34 +701,6 @@ The asymptotic variance of our GM estimator can then be estimated by
  \label{eq:implemented_variance}
 \end{equation}
 where $\widehat V_n:=n^{-1}\widehat\omega^\top W\widehat\omega$. The standard error is $\sqrt{\widehat V_n/n}$. The same observations in $I_1$ may be used for the nuisance estimates, the first-fold KRR fit, and the residual variance estimates; consistency is proved in \Cref{prop:noise_variances}.
-
-\subsection{Wild-bootstrap variance procedure}
-
-Alternatively, the variance of the GM estimator can be estimated by a fixed-design wild bootstrap, conditional on the first-fold nuisance and variance estimates.
-This procedure aims to calculate the variance and covariance portions contributed by $\frac1n\widehat\omega^\top\{\widetilde{\bm Y}-\widehat f_\lambda(\bm X)\}$. However, under the asymptotic theory below, the additional alignment contribution is negligible. This conditional procedure does not estimate the finite-sample variation from fitting the first-fold nuisances. That contribution is asymptotically negligible in the infinite-rank CLT proved below. The wild bootstrap procedure is outlined in~\ref{alg:wild_bootstrap}.
-
-\begin{algorithm}[ht]
-\caption{Wild bootstrap for the GM estimator}
-\label{alg:wild_bootstrap}
-\begin{algorithmic}[1]
-\Require Second-fold KRR fit $\widehat f_\lambda$, fixed design $\bm X$, query point $x_0$, GM tolerance $\gamma^2$, number of replicates $B$.
-\State Compute residuals $r_i=\widetilde Y_i-\widehat f_\lambda(X_i)$.
-\State Hold the first-fold nuisance estimates and the matrix $W$ fixed.
-\For{$b=1,\ldots,B$}
-  \State Draw Rademacher (or Mammen) multipliers $v_i^{(b)}$.
-  \State Set $\eps_i^{*(b)}=v_i^{(b)}r_i$ and $\widetilde Y_i^{*(b)}=\widehat f_\lambda(X_i)+\eps_i^{*(b)}$.
-  \State Refit KRR with the same $\lambda$ to obtain $\widehat f_\lambda^{*(b)}$.
-  \State Re-solve the GM weight program using the fixed design, fixed $W$, and the same $\gamma^2$.
-  \State Record the stochastic component $S_b=n^{-1}(\widehat\omega^{*(b)})^\top\bm\eps^{*(b)}$.
-  \State Record the alignment component
-  \[
-    B_b=\inner{\widehat f_\lambda^{*(b)}-\widehat f_\lambda}
-    {K_{x_0}-n^{-1}\sum_i\widehat\omega_i^{*(b)}K_{X_i}}_{\F}.
-  \]
-\EndFor
-\State Return the bootstrap sample variance of $(B_b+S_b)$ together with the individual bootstrap sample variances of $B_b$, $S_b$, and the bootstrap sample covariance of $(B_b,S_b)$.
-\end{algorithmic}
-\end{algorithm}
 
 \clearpage
 \newpage
